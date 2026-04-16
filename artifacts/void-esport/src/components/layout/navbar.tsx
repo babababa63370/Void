@@ -4,6 +4,13 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 import logoPath from "@assets/purple_black_emblem_without_void_c4a1470f_1776350974040.png";
 
+const navItems = [
+  { href: "/about", label: "About" },
+  { href: "/roster", label: "Roster" },
+  { href: "/achievements", label: "Legacy" },
+  { href: "/join", label: "Join" },
+];
+
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -17,14 +24,19 @@ export default function Navbar() {
 
         {/* Desktop Nav */}
         <nav className="hidden md:flex items-center gap-8">
-          <a href="#about" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors tracking-wider uppercase">About</a>
-          <a href="#roster" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors tracking-wider uppercase">Roster</a>
-          <a href="#achievements" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors tracking-wider uppercase">Legacy</a>
-          <a href="#join" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors tracking-wider uppercase">Join</a>
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors tracking-wider uppercase"
+            >
+              {item.label}
+            </Link>
+          ))}
         </nav>
 
         <div className="hidden md:block">
-          <a 
+          <a
             href="https://discord.gg/gr9GTEJWWU"
             target="_blank"
             rel="noopener noreferrer"
@@ -36,7 +48,7 @@ export default function Navbar() {
         </div>
 
         {/* Mobile Menu Toggle */}
-        <button 
+        <button
           className="md:hidden text-foreground p-2"
           onClick={() => setIsOpen(!isOpen)}
         >
@@ -47,11 +59,17 @@ export default function Navbar() {
       {/* Mobile Nav */}
       {isOpen && (
         <div className="md:hidden absolute top-20 left-0 right-0 bg-background border-b border-white/5 p-4 flex flex-col gap-4">
-          <a href="#about" className="p-3 text-sm font-medium text-muted-foreground hover:text-primary transition-colors tracking-wider uppercase" onClick={() => setIsOpen(false)}>About</a>
-          <a href="#roster" className="p-3 text-sm font-medium text-muted-foreground hover:text-primary transition-colors tracking-wider uppercase" onClick={() => setIsOpen(false)}>Roster</a>
-          <a href="#achievements" className="p-3 text-sm font-medium text-muted-foreground hover:text-primary transition-colors tracking-wider uppercase" onClick={() => setIsOpen(false)}>Legacy</a>
-          <a href="#join" className="p-3 text-sm font-medium text-muted-foreground hover:text-primary transition-colors tracking-wider uppercase" onClick={() => setIsOpen(false)}>Join</a>
-          <a 
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="p-3 text-sm font-medium text-muted-foreground hover:text-primary transition-colors tracking-wider uppercase"
+              onClick={() => setIsOpen(false)}
+            >
+              {item.label}
+            </Link>
+          ))}
+          <a
             href="https://discord.gg/gr9GTEJWWU"
             target="_blank"
             rel="noopener noreferrer"

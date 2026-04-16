@@ -5,10 +5,10 @@ import { Home, Trophy, Users, Sword, ArrowLeft } from "lucide-react";
 import logoPath from "@assets/purple_black_emblem_without_void_c4a1470f_1776350974040.png";
 
 const navLinks = [
-  { href: "/#about", label: "À Propos", icon: <Sword className="w-4 h-4" /> },
-  { href: "/#roster", label: "Roster", icon: <Users className="w-4 h-4" /> },
-  { href: "/#achievements", label: "Palmarès", icon: <Trophy className="w-4 h-4" /> },
-  { href: "/#join", label: "Rejoindre", icon: <Home className="w-4 h-4" /> },
+  { href: "/about", label: "À Propos", icon: <Sword className="w-4 h-4" /> },
+  { href: "/roster", label: "Roster", icon: <Users className="w-4 h-4" /> },
+  { href: "/achievements", label: "Palmarès", icon: <Trophy className="w-4 h-4" /> },
+  { href: "/join", label: "Rejoindre", icon: <Home className="w-4 h-4" /> },
 ];
 
 const socialLinks = [
