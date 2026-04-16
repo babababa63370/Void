@@ -1,12 +1,25 @@
 import logoPath from "@assets/purple_black_emblem_without_void_c4a1470f_1776350974040.png";
 import { SiDiscord, SiX, SiYoutube, SiTwitch } from "react-icons/si";
+import { Link } from "wouter";
+
+const navItems = [
+  { href: "/about", label: "About" },
+  { href: "/roster", label: "Roster" },
+  { href: "/achievements", label: "Legacy" },
+  { href: "/join", label: "Join" },
+];
+
+const legalItems = [
+  { href: "/terms", label: "Terms of Service" },
+  { href: "/privacy", label: "Privacy Policy" },
+  { href: "/rules", label: "Rules" },
+];
 
 export default function Footer() {
   return (
     <footer className="bg-black border-t border-white/5 py-12 md:py-16 relative overflow-hidden">
-      {/* Background glow */}
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-64 bg-primary/5 blur-[100px] pointer-events-none rounded-full" />
-      
+
       <div className="container mx-auto px-4 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="col-span-1 md:col-span-2">
@@ -36,19 +49,26 @@ export default function Footer() {
           <div>
             <h4 className="font-orbitron font-semibold text-white tracking-wider mb-6">Navigate</h4>
             <ul className="space-y-3">
-              <li><a href="#about" className="text-muted-foreground hover:text-primary transition-colors text-sm uppercase tracking-wide">About</a></li>
-              <li><a href="#roster" className="text-muted-foreground hover:text-primary transition-colors text-sm uppercase tracking-wide">Roster</a></li>
-              <li><a href="#achievements" className="text-muted-foreground hover:text-primary transition-colors text-sm uppercase tracking-wide">Legacy</a></li>
-              <li><a href="#join" className="text-muted-foreground hover:text-primary transition-colors text-sm uppercase tracking-wide">Join</a></li>
+              {navItems.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className="text-muted-foreground hover:text-primary transition-colors text-sm uppercase tracking-wide">
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
           
           <div>
             <h4 className="font-orbitron font-semibold text-white tracking-wider mb-6">Legal</h4>
             <ul className="space-y-3">
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors text-sm uppercase tracking-wide">Terms of Service</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors text-sm uppercase tracking-wide">Privacy Policy</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors text-sm uppercase tracking-wide">Rules</a></li>
+              {legalItems.map((item) => (
+                <li key={item.href}>
+                  <Link href={item.href} className="text-muted-foreground hover:text-primary transition-colors text-sm uppercase tracking-wide">
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
         </div>
