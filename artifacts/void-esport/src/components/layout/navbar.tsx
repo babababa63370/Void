@@ -25,7 +25,9 @@ export default function Navbar() {
 
         <div className="hidden md:block">
           <a 
-            href="#" 
+            href="https://discord.gg/gr9GTEJWWU"
+            target="_blank"
+            rel="noopener noreferrer"
             className="clip-path-button inline-flex items-center justify-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground font-orbitron font-bold uppercase tracking-wider px-6 py-3 transition-all hover:box-glow"
           >
             <SiDiscord className="w-5 h-5" />
@@ -50,7 +52,9 @@ export default function Navbar() {
           <a href="#achievements" className="p-3 text-sm font-medium text-muted-foreground hover:text-primary transition-colors tracking-wider uppercase" onClick={() => setIsOpen(false)}>Legacy</a>
           <a href="#join" className="p-3 text-sm font-medium text-muted-foreground hover:text-primary transition-colors tracking-wider uppercase" onClick={() => setIsOpen(false)}>Join</a>
           <a 
-            href="#" 
+            href="https://discord.gg/gr9GTEJWWU"
+            target="_blank"
+            rel="noopener noreferrer"
             className="clip-path-button inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground font-orbitron font-bold uppercase tracking-wider px-6 py-4 mt-2"
             onClick={() => setIsOpen(false)}
           >

@@ -55,7 +55,9 @@ export default function Home() {
             className="flex flex-col sm:flex-row gap-6"
           >
             <a 
-              href="#" 
+              href="https://discord.gg/gr9GTEJWWU" 
+              target="_blank"
+              rel="noopener noreferrer"
               className="clip-path-button inline-flex items-center justify-center gap-3 bg-primary hover:bg-primary/90 text-primary-foreground font-orbitron font-bold uppercase tracking-wider px-8 py-4 text-lg transition-all hover:box-glow-strong"
             >
               <SiDiscord className="w-6 h-6" />
@@ -303,7 +305,9 @@ export default function Home() {
               Join our Discord server to apply for a roster spot or become part of the community. Read the requirements channel upon entry.
             </p>
             <a 
-              href="#" 
+              href="https://discord.gg/gr9GTEJWWU" 
+              target="_blank"
+              rel="noopener noreferrer"
               className="clip-path-button inline-flex items-center justify-center gap-3 bg-primary hover:bg-primary/90 text-primary-foreground font-orbitron font-bold uppercase tracking-wider px-10 py-5 text-xl transition-all hover:box-glow-strong w-full sm:w-auto"
             >
               <SiDiscord className="w-6 h-6" />

@@ -18,7 +18,7 @@ export default function Footer() {
               Forged in darkness, driven by competition. VOID is the premier Brawl Stars esport community for players who demand excellence and thrive in the void.
             </p>
             <div className="flex items-center gap-4">
-              <a href="#" className="w-10 h-10 rounded-none clip-path-button bg-card flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-white/5 transition-all">
+              <a href="https://discord.gg/gr9GTEJWWU" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-none clip-path-button bg-card flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-white/5 transition-all">
                 <SiDiscord className="w-4 h-4" />
               </a>
               <a href="#" className="w-10 h-10 rounded-none clip-path-button bg-card flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-white/5 transition-all">
