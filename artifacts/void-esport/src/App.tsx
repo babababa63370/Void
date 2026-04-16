@@ -8,6 +8,7 @@ import Join from "@/pages/join";
 import Rules from "@/pages/rules";
 import Terms from "@/pages/terms";
 import Privacy from "@/pages/privacy";
+import CookieBanner from "@/components/cookie-banner";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,7 @@ function App() {
           <Router />
         </WouterRouter>
         <Toaster />
+        <CookieBanner />
       </TooltipProvider>
     </QueryClientProvider>
   );
