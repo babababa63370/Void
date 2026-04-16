@@ -27,7 +27,7 @@ export default function Home() {
             className="mb-8 relative"
           >
             <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
-            <img src={logoPath} alt="VOID Esports" className="w-48 h-48 md:w-64 md:h-64 object-contain relative z-10 drop-shadow-[0_0_30px_rgba(168,85,247,0.5)]" />
+            <img src={logoPath} alt="VOID Esports" className="w-48 h-48 md:w-64 md:h-64 object-contain relative z-10 drop-shadow-[0_0_30px_rgba(168,85,247,0.5)] rounded-2xl" />
           </motion.div>
 
           <motion.h1 
@@ -130,7 +130,7 @@ export default function Home() {
               <div className="absolute inset-4 border border-primary/40 rounded-full animate-[spin_15s_linear_infinite_reverse] opacity-50" />
               <div className="absolute inset-8 border border-white/10 rounded-full animate-[spin_10s_linear_infinite] opacity-50" />
               <div className="bg-black border border-white/10 p-12 clip-path-card relative z-10 box-glow backdrop-blur-sm">
-                <img src={logoPath} alt="VOID Logo" className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.3)]" />
+                <img src={logoPath} alt="VOID Logo" className="w-full h-full object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.3)] rounded-2xl" />
               </div>
             </motion.div>
           </div>
@@ -294,7 +294,7 @@ export default function Home() {
             className="max-w-3xl mx-auto border border-white/10 bg-black/60 backdrop-blur-md p-12 md:p-20 clip-path-slant"
           >
             <div className="mb-8 flex justify-center">
-              <img src={logoPath} alt="VOID Logo" className="w-24 h-24 object-contain" />
+              <img src={logoPath} alt="VOID Logo" className="w-24 h-24 object-contain rounded-2xl" />
             </div>
             <h2 className="text-4xl md:text-6xl font-black font-orbitron uppercase tracking-tight mb-6">
               Ready to step into the <span className="text-primary text-glow">Void?</span>

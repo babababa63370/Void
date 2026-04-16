@@ -11,7 +11,7 @@ export default function Navbar() {
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-white/5">
       <div className="container mx-auto px-4 h-20 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-3">
-          <img src={logoPath} alt="VOID Logo" className="w-12 h-12 object-contain" />
+          <img src={logoPath} alt="VOID Logo" className="w-12 h-12 object-contain rounded-xl" />
           <span className="font-orbitron font-bold text-2xl tracking-widest text-white text-glow">VOID</span>
         </Link>
 

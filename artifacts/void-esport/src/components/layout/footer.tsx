@@ -11,7 +11,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="col-span-1 md:col-span-2">
             <div className="flex items-center gap-3 mb-6">
-              <img src={logoPath} alt="VOID Logo" className="w-10 h-10 object-contain" />
+              <img src={logoPath} alt="VOID Logo" className="w-10 h-10 object-contain rounded-xl" />
               <span className="font-orbitron font-bold text-2xl tracking-widest text-white">VOID</span>
             </div>
             <p className="text-muted-foreground text-sm max-w-sm mb-8 leading-relaxed">
