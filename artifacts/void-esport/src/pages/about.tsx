@@ -40,7 +40,7 @@ const stats = [
   { value: "100+", labelKey: "about_stat1", icon: Users },
   { value: "3", labelKey: "about_stat2", icon: Shield },
   { value: "50+", labelKey: "about_stat3", icon: Swords },
-  { value: "2024", labelKey: "about_stat4", icon: Star },
+  { value: "2026", labelKey: "about_stat4", icon: Star },
 ];
 
 const values = [

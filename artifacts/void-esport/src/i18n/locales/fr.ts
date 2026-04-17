@@ -222,7 +222,7 @@ const fr: Translations = {
   about_founderP2: "Dès le premier jour, chaque décision, chaque recrutement, chaque stratégie a été façonné par une quête incessante d'excellence. VOID n'est pas un clan — c'est une affirmation.",
   about_storyLabel: "Origines",
   about_storyTitle: "Comment Tout a Commencé",
-  about_storyP1: "VOID Esport a été fondé en 2024 avec une vision claire : construire l'organisation Brawl Stars la plus compétitive de la scène francophone et au-delà.",
+  about_storyP1: "VOID Esport a été fondé en 2026 avec une vision claire : construire l'organisation Brawl Stars la plus compétitive de la scène francophone et au-delà.",
   about_storyP2: "Ce qui a commencé comme un groupe soudé de joueurs passionnés est devenu une structure esport complète — avec plusieurs divisions, des tryouts organisés et une communauté qui s'impose les plus hauts standards.",
   about_storyP3: "Aujourd'hui, VOID s'impose comme l'une des organisations Brawl Stars les plus reconnues, participant aux grands tournois, cultivant les nouveaux talents et repoussant sans cesse les limites de ce qu'un clan peut être.",
   about_valuesLabel: "Notre ADN",
