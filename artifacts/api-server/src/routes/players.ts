@@ -1,22 +1,23 @@
 import { Router, type IRouter } from "express";
 import { db, playerLoginsTable } from "@workspace/db";
+import { isNotNull } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-router.post("/players/login", async (req, res) => {
-  const { discordTag } = req.body as { discordTag?: string };
+// GET /api/players — public, returns all players with an assigned role
+router.get("/players", async (_req, res) => {
+  const players = await db
+    .select({
+      discordId: playerLoginsTable.discordId,
+      username: playerLoginsTable.username,
+      avatar: playerLoginsTable.avatar,
+      discriminator: playerLoginsTable.discriminator,
+      role: playerLoginsTable.role,
+    })
+    .from(playerLoginsTable)
+    .where(isNotNull(playerLoginsTable.role));
 
-  if (!discordTag || typeof discordTag !== "string" || !discordTag.trim()) {
-    res.status(400).json({ error: "discordTag is required" });
-    return;
-  }
-
-  try {
-    await db.insert(playerLoginsTable).values({ discordTag: discordTag.trim() });
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: "db_error" });
-  }
+  res.json({ players });
 });
 
 export default router;

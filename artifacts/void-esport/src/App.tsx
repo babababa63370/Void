@@ -9,6 +9,7 @@ import Rules from "@/pages/rules";
 import Terms from "@/pages/terms";
 import Privacy from "@/pages/privacy";
 import Roster from "@/pages/roster";
+import RosterPlayer from "@/pages/roster-player";
 import PlayersLogin from "@/pages/players-login";
 import Meonix from "@/pages/meonix";
 import CookieBanner from "@/components/cookie-banner";
@@ -32,6 +33,7 @@ function Router() {
     <Switch>
       <Route path="/" component={Home} />
       <Route path="/roster" component={Roster} />
+      <Route path="/roster/:username" component={RosterPlayer} />
       <Route path="/join" component={Join} />
       <Route path="/rules" component={Rules} />
       <Route path="/terms" component={Terms} />

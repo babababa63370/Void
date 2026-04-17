@@ -27,7 +27,6 @@ if (!basePath) {
 }
 
 const routeToHtml: Record<string, string> = {
-  "/roster": "/roster.html",
   "/join": "/join.html",
   "/rules": "/rules.html",
   "/terms": "/terms.html",
@@ -48,6 +47,12 @@ export default defineConfig({
         server.middlewares.use((req, _res, next) => {
           const url = (req.url || "/").split("?")[0];
           const stripped = url.replace(/^\/(fr|es|de|pt)(\/|$)/, "/").replace(/\/$/, "") || "/";
+          // /roster and /roster/:username all serve roster.html
+          if (stripped === "/roster" || stripped.startsWith("/roster/")) {
+            req.url = "/roster.html";
+            next();
+            return;
+          }
           const target = routeToHtml[stripped];
           if (target) req.url = target;
           next();
