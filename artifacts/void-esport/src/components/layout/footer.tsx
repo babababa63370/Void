@@ -1,21 +1,24 @@
 import logoPath from "@assets/purple_black_emblem_without_void_c4a1470f_1776350974040.png";
 import { SiDiscord, SiX, SiYoutube, SiTwitch } from "react-icons/si";
 import { Link } from "wouter";
-
-const navItems = [
-  { href: "/about", label: "About" },
-  { href: "/roster", label: "Roster" },
-  { href: "/achievements", label: "Legacy" },
-  { href: "/join", label: "Join" },
-];
-
-const legalItems = [
-  { href: "/terms", label: "Terms of Service" },
-  { href: "/privacy", label: "Privacy Policy" },
-  { href: "/rules", label: "Rules" },
-];
+import { useI18n } from "@/i18n/context";
 
 export default function Footer() {
+  const { t } = useI18n();
+
+  const navItems = [
+    { href: "/about", label: t("nav_about") },
+    { href: "/roster", label: t("nav_roster") },
+    { href: "/achievements", label: t("nav_legacy") },
+    { href: "/join", label: t("nav_join") },
+  ];
+
+  const legalItems = [
+    { href: "/terms", label: t("footer_terms") },
+    { href: "/privacy", label: t("footer_privacy") },
+    { href: "/rules", label: t("footer_rules") },
+  ];
+
   return (
     <footer className="bg-black border-t border-white/5 py-12 md:py-16 relative overflow-hidden">
       <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full max-w-3xl h-64 bg-primary/5 blur-[100px] pointer-events-none rounded-full" />
@@ -28,7 +31,7 @@ export default function Footer() {
               <span className="font-orbitron font-bold text-2xl tracking-widest text-white">VOID</span>
             </div>
             <p className="text-muted-foreground text-sm max-w-sm mb-8 leading-relaxed">
-              Forged in darkness, driven by competition. VOID is the premier Brawl Stars esport community for players who demand excellence and thrive in the void.
+              {t("footer_desc")}
             </p>
             <div className="flex items-center gap-4">
               <a href="https://discord.gg/gr9GTEJWWU" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-none clip-path-button bg-card flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-white/5 transition-all">
@@ -45,9 +48,9 @@ export default function Footer() {
               </a>
             </div>
           </div>
-          
+
           <div>
-            <h4 className="font-orbitron font-semibold text-white tracking-wider mb-6">Navigate</h4>
+            <h4 className="font-orbitron font-semibold text-white tracking-wider mb-6">{t("footer_navigate")}</h4>
             <ul className="space-y-3">
               {navItems.map((item) => (
                 <li key={item.href}>
@@ -58,9 +61,9 @@ export default function Footer() {
               ))}
             </ul>
           </div>
-          
+
           <div>
-            <h4 className="font-orbitron font-semibold text-white tracking-wider mb-6">Legal</h4>
+            <h4 className="font-orbitron font-semibold text-white tracking-wider mb-6">{t("footer_legal")}</h4>
             <ul className="space-y-3">
               {legalItems.map((item) => (
                 <li key={item.href}>
@@ -72,13 +75,13 @@ export default function Footer() {
             </ul>
           </div>
         </div>
-        
+
         <div className="mt-16 pt-8 border-t border-white/5 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-muted-foreground text-xs uppercase tracking-widest">
-            © {new Date().getFullYear()} VOID ESPORTS. ALL RIGHTS RESERVED.
+            © {new Date().getFullYear()} VOID ESPORTS. {t("footer_rights").toUpperCase()}.
           </p>
           <p className="text-muted-foreground/50 text-xs tracking-widest">
-            NOT AFFILIATED WITH SUPERCELL.
+            {t("footer_notAffiliated").toUpperCase()}.
           </p>
         </div>
       </div>

@@ -25,3 +25,42 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
+
+## VOID Esport Website (`artifacts/void-esport`)
+
+Competitive Brawl Stars esport clan site with cyberpunk/esports aesthetic.
+
+### Stack
+- React + Vite + TypeScript
+- Tailwind CSS (custom theme: `primary` = purple, `accent` = cyan)
+- Framer Motion animations
+- Wouter routing
+- Orbitron font (Google Fonts)
+- No backend — static site
+
+### Pages
+- `/` — Home (hero, manifesto, divisions, achievements, join CTA)
+- `/roster` — Roster page with Alpha/Omega/Staff tabs and player cards
+- `/join` — Recruitment page with division tiers, requirements, process
+- `/rules` — Code of conduct with sanction levels
+- `/terms` — Terms of service
+- `/privacy` — Privacy policy
+- `/*` — Animated 404 page
+
+### i18n System (`src/i18n/`)
+- Custom lightweight i18n (no external lib), zero runtime deps
+- 5 languages: English (default), French, Spanish, German, Portuguese
+- URL prefix routing: `/` = EN, `/fr/` `/es/` `/de/` `/pt/` = others
+- Auto-detection: URL prefix → localStorage `void_lang` → ipapi.co geolocation → browser lang
+- WouterRouter base computed from URL before React render
+- Language switcher: desktop dropdown + mobile grid (5 flags)
+- All text uses `useI18n()` hook with `t('key')` — ~150 translation keys
+- Brand taglines ("Embrace The Void", "VOID") kept untranslated
+
+### Key Files
+- `src/App.tsx` — Router + I18nProvider + `getRouterBase()`
+- `src/i18n/context.tsx` — I18nProvider, useI18n, switchLang, IP detection
+- `src/i18n/locales/en.ts` — Canonical locale + `Translations` type
+- `src/i18n/locales/{fr,es,de,pt}.ts` — Full translations
+- `src/pages/roster.tsx` — Roster with PlayerCard + OpenSlotCard
+- `src/components/layout/navbar.tsx` — Responsive navbar + lang switcher

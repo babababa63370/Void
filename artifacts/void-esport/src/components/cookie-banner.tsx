@@ -2,8 +2,10 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Cookie, X } from "lucide-react";
 import { Link } from "wouter";
+import { useI18n } from "@/i18n/context";
 
 export default function CookieBanner() {
+  const { t } = useI18n();
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -31,16 +33,15 @@ export default function CookieBanner() {
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
           className="fixed bottom-0 left-0 right-0 z-[100] border-t border-white/10 bg-background/95 backdrop-blur-md"
         >
-          {/* Top accent line */}
           <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
 
           <div className="container mx-auto px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start gap-3 flex-1 min-w-0">
               <Cookie className="w-5 h-5 text-primary shrink-0 mt-0.5" />
               <p className="text-sm text-muted-foreground leading-relaxed">
-                Nous utilisons des cookies pour améliorer votre expérience sur nos plateformes.{" "}
+                {t("cookie_text")}{" "}
                 <Link href="/privacy" className="text-primary hover:underline underline-offset-4">
-                  En savoir plus
+                  {t("cookie_learnMore")}
                 </Link>
               </p>
             </div>
@@ -50,17 +51,17 @@ export default function CookieBanner() {
                 onClick={decline}
                 className="font-orbitron text-xs uppercase tracking-wider text-muted-foreground hover:text-foreground transition-colors px-4 py-2"
               >
-                Refuser
+                {t("cookie_decline")}
               </button>
               <button
                 onClick={accept}
                 className="clip-path-button font-orbitron text-xs uppercase tracking-wider bg-primary hover:bg-primary/90 text-primary-foreground px-6 py-2 transition-all hover:box-glow"
               >
-                Accepter
+                {t("cookie_accept")}
               </button>
               <button
                 onClick={decline}
-                aria-label="Fermer"
+                aria-label="Close"
                 className="text-muted-foreground hover:text-foreground transition-colors p-1"
               >
                 <X className="w-4 h-4" />
