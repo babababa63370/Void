@@ -12,6 +12,13 @@ export const playerLoginsTable = pgTable("player_logins", {
   discriminator: text("discriminator").default(""),
   avatar: text("avatar"),
   role: text("role"),
+  customAvatar: text("custom_avatar"),
+  banner: text("banner"),
+  background: text("background"),
+  font: text("font"),
+  music: text("music"),
+  links: text("links"),
+  brawlTag: text("brawl_tag"),
   lastLoginAt: timestamp("last_login_at").defaultNow().notNull(),
 });
 
