@@ -1,13 +1,12 @@
-import { useEffect, useState, useRef, useCallback, type ChangeEvent } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Crown, Crosshair, UserCheck, ArrowLeft, Pencil, X,
   Music, Music2, Link2, Plus, Trash2, Loader2, Save, ExternalLink,
-  Image, Upload, Video, Palette,
+  Image, Video, Palette,
 } from "lucide-react";
 import { SiDiscord } from "react-icons/si";
-import { useUpload } from "@workspace/object-storage-web";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import NotFound from "@/pages/not-found";
 
@@ -32,7 +31,7 @@ interface ProfileData {
 interface LinkItem { label: string; url: string }
 interface Session { discordId: string; token: string }
 
-type BgMode = "style" | "image-url" | "image-upload" | "video";
+type BgMode = "style" | "image-url" | "video";
 
 interface EditState {
   customAvatar: string;
@@ -112,8 +111,7 @@ function loadFont(name: string | null) {
 function detectBgMode(bg: string | null, vid: string | null): BgMode {
   if (vid) return "video";
   if (!bg) return "style";
-  if (bg.startsWith("/api/storage")) return "image-upload";
-  if (bg.startsWith("http")) return "image-url";
+  if (bg.startsWith("http") || bg.startsWith("/api/storage")) return "image-url";
   return "style";
 }
 
@@ -164,13 +162,6 @@ function BgSection({
   data: EditState;
   onChange: (updates: Partial<EditState>) => void;
 }) {
-  const { uploadFile, isUploading, progress } = useUpload({
-    onSuccess: (res) => onChange({ background: `/api/storage${res.objectPath}`, bgMode: "image-upload" }),
-    onError: (err) => console.error("Upload error:", err),
-  });
-
-  const fileRef = useRef<HTMLInputElement>(null);
-
   const modeBtn = (mode: BgMode, icon: React.ReactNode, label: string) => (
     <button
       onClick={() => onChange({ bgMode: mode, ...(mode === "video" ? { background: "" } : { backgroundVideo: "" }) })}
@@ -187,7 +178,6 @@ function BgSection({
       <div className="flex gap-1.5">
         {modeBtn("style", <Palette className="w-3.5 h-3.5" />, "Couleur")}
         {modeBtn("image-url", <Image className="w-3.5 h-3.5" />, "Image URL")}
-        {modeBtn("image-upload", <Upload className="w-3.5 h-3.5" />, "Upload")}
         {modeBtn("video", <Video className="w-3.5 h-3.5" />, "Vidéo")}
       </div>
 
@@ -222,38 +212,6 @@ function BgSection({
           onChange={(e) => onChange({ background: e.target.value })}
           placeholder="https://...image.jpg"
         />
-      )}
-
-      {/* Image upload */}
-      {data.bgMode === "image-upload" && (
-        <div className="space-y-2">
-          <input
-            ref={fileRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={async (e: ChangeEvent<HTMLInputElement>) => {
-              const file = e.target.files?.[0];
-              if (file) await uploadFile(file);
-              e.target.value = "";
-            }}
-          />
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={isUploading}
-            className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-primary/40 hover:border-primary/70 text-xs font-orbitron uppercase tracking-wider text-primary/70 hover:text-primary transition-all disabled:opacity-50"
-          >
-            {isUploading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {progress}%</> : <><Upload className="w-3.5 h-3.5" /> Choisir une image</>}
-          </button>
-          {data.background?.startsWith("/api/storage") && (
-            <div className="relative h-16 overflow-hidden border border-white/10">
-              <img src={data.background} alt="Aperçu fond" className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                <span className="text-[10px] font-orbitron text-white/60 uppercase tracking-wider">Image enregistrée</span>
-              </div>
-            </div>
-          )}
-        </div>
       )}
 
       {/* Video URL */}
