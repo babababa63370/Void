@@ -4,10 +4,13 @@ import { z } from "zod/v4";
 
 export const playerLoginsTable = pgTable("player_logins", {
   id: serial("id").primaryKey(),
-  discordTag: text("discord_tag").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+  discordId: text("discord_id").notNull(),
+  username: text("username").notNull(),
+  discriminator: text("discriminator").default(""),
+  avatar: text("avatar"),
+  lastLoginAt: timestamp("last_login_at").defaultNow().notNull(),
 });
 
-export const insertPlayerLoginSchema = createInsertSchema(playerLoginsTable).omit({ id: true, createdAt: true });
+export const insertPlayerLoginSchema = createInsertSchema(playerLoginsTable).omit({ id: true, lastLoginAt: true });
 export type InsertPlayerLogin = z.infer<typeof insertPlayerLoginSchema>;
 export type PlayerLogin = typeof playerLoginsTable.$inferSelect;
