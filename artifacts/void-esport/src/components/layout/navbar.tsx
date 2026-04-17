@@ -2,6 +2,7 @@ import { Link } from "wouter";
 import { SiDiscord } from "react-icons/si";
 import { Menu, X, Globe, ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import logoPath from "@assets/purple_black_emblem_without_void_c4a1470f_1776350974040.png";
 import { useI18n, SUPPORTED_LANGS, LANG_NAMES, LANG_FLAGS, type Lang } from "@/i18n/context";
 
@@ -28,12 +29,21 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [isOpen]);
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-white/5">
-      <div className="container mx-auto px-4 h-20 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-3">
-          <img src={logoPath} alt="VOID Logo" className="w-12 h-12 object-contain rounded-xl" />
-          <span className="font-orbitron font-bold text-2xl tracking-widest text-white text-glow">VOID</span>
+      <div className="container mx-auto px-4 h-16 md:h-20 flex items-center justify-between">
+        <Link href="/" className="flex items-center gap-3" onClick={() => setIsOpen(false)}>
+          <img src={logoPath} alt="VOID Logo" className="w-10 h-10 md:w-12 md:h-12 object-contain rounded-xl" />
+          <span className="font-orbitron font-bold text-xl md:text-2xl tracking-widest text-white text-glow">VOID</span>
         </Link>
 
         {/* Desktop Nav */}
@@ -93,62 +103,96 @@ export default function Navbar() {
 
         {/* Mobile Menu Toggle */}
         <button
-          className="md:hidden text-foreground p-2"
+          className="md:hidden text-foreground p-2 min-w-[44px] min-h-[44px] flex items-center justify-center"
           onClick={() => setIsOpen(!isOpen)}
+          aria-label={isOpen ? "Close menu" : "Open menu"}
         >
-          {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          <AnimatePresence mode="wait" initial={false}>
+            {isOpen ? (
+              <motion.span key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }} transition={{ duration: 0.15 }}>
+                <X className="w-6 h-6" />
+              </motion.span>
+            ) : (
+              <motion.span key="open" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }} transition={{ duration: 0.15 }}>
+                <Menu className="w-6 h-6" />
+              </motion.span>
+            )}
+          </AnimatePresence>
         </button>
       </div>
 
       {/* Mobile Nav */}
-      {isOpen && (
-        <div className="md:hidden absolute top-20 left-0 right-0 bg-background border-b border-white/5 p-4 flex flex-col gap-4">
-          {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="p-3 text-sm font-medium text-muted-foreground hover:text-primary transition-colors tracking-wider uppercase"
-              onClick={() => setIsOpen(false)}
-            >
-              {item.label}
-            </Link>
-          ))}
-
-          {/* Mobile language switcher */}
-          <div className="border-t border-white/10 pt-4 mt-2">
-            <p className="text-xs font-orbitron text-muted-foreground/50 uppercase tracking-widest mb-3 px-3">
-              {t("nav_language")}
-            </p>
-            <div className="grid grid-cols-5 gap-2">
-              {SUPPORTED_LANGS.map((l: Lang) => (
-                <button
-                  key={l}
-                  onClick={() => { switchLang(l); setIsOpen(false); }}
-                  className={`flex flex-col items-center gap-1 py-2 border transition-colors text-xs font-orbitron tracking-wider uppercase ${
-                    l === lang
-                      ? "border-primary/50 bg-primary/10 text-primary"
-                      : "border-white/5 bg-white/5 text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  <span>{LANG_FLAGS[l]}</span>
-                  <span>{l.toUpperCase()}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <a
-            href="https://discord.gg/gr9GTEJWWU"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="clip-path-button inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground font-orbitron font-bold uppercase tracking-wider px-6 py-4 mt-2"
-            onClick={() => setIsOpen(false)}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="md:hidden overflow-hidden bg-background/95 backdrop-blur-lg border-b border-white/5"
           >
-            <SiDiscord className="w-5 h-5" />
-            {t("nav_enterVoid")}
-          </a>
-        </div>
-      )}
+            <div className="px-4 pb-6 pt-2 flex flex-col gap-1">
+              {navItems.map((item, i) => (
+                <motion.div
+                  key={item.href}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.05 + 0.05 }}
+                >
+                  <Link
+                    href={item.href}
+                    className="flex items-center w-full px-4 py-3.5 text-base font-medium text-muted-foreground hover:text-primary hover:bg-white/5 transition-colors tracking-wider uppercase border-b border-white/5"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                </motion.div>
+              ))}
+
+              {/* Mobile language switcher */}
+              <div className="pt-4 mt-2">
+                <p className="text-xs font-orbitron text-muted-foreground/50 uppercase tracking-widest mb-3 px-4">
+                  {t("nav_language")}
+                </p>
+                <div className="grid grid-cols-5 gap-2">
+                  {SUPPORTED_LANGS.map((l: Lang) => (
+                    <button
+                      key={l}
+                      onClick={() => { switchLang(l); setIsOpen(false); }}
+                      className={`flex flex-col items-center gap-1 py-2.5 border transition-colors text-xs font-orbitron tracking-wider uppercase ${
+                        l === lang
+                          ? "border-primary/50 bg-primary/10 text-primary"
+                          : "border-white/5 bg-white/5 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      <span className="text-lg">{LANG_FLAGS[l]}</span>
+                      <span className="text-[10px]">{l.toUpperCase()}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.25 }}
+                className="mt-4"
+              >
+                <a
+                  href="https://discord.gg/gr9GTEJWWU"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="clip-path-button w-full inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground font-orbitron font-bold uppercase tracking-wider px-6 py-4"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <SiDiscord className="w-5 h-5" />
+                  {t("nav_enterVoid")}
+                </a>
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
