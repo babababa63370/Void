@@ -4,9 +4,14 @@ import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { Link } from "wouter";
 import { useI18n } from "@/i18n/context";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Privacy() {
   const { t } = useI18n();
+  usePageMeta({
+    title: "Privacy Policy",
+    description: "Privacy Policy for VOID Esport. Learn how we collect, use, and protect your personal data.",
+  });
 
   const sections = [
     { id: "01", icon: <Eye className="w-5 h-5 text-primary" />, titleKey: "privacy_s1Title" as const, contentKey: "privacy_s1Content" as const },

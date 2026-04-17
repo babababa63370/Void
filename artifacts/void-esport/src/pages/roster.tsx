@@ -5,6 +5,7 @@ import { Crown, Crosshair, Users, UserCheck, Plus } from "lucide-react";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { useI18n } from "@/i18n/context";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 interface Player {
   tag: string;
@@ -112,6 +113,10 @@ function OpenSlotCard({ t }: { t: (k: string) => string }) {
 
 export default function Roster() {
   const { t } = useI18n();
+  usePageMeta({
+    title: "Roster",
+    description: "Discover VOID Esport's elite Brawl Stars rosters — Alpha, Omega & Nexus divisions. Meet the competitors at the top of the game.",
+  });
   const [activeTab, setActiveTab] = useState<"alpha" | "omega" | "staff">("alpha");
 
   const tabs = [

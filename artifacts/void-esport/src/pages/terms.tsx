@@ -4,9 +4,14 @@ import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { Link } from "wouter";
 import { useI18n } from "@/i18n/context";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Terms() {
   const { t } = useI18n();
+  usePageMeta({
+    title: "Terms of Service",
+    description: "Terms of Service for VOID Esport. Read our usage terms and conditions before using our platforms.",
+  });
 
   const sections = [
     { id: "01", titleKey: "terms_s1Title" as const, contentKey: "terms_s1Content" as const },

@@ -4,9 +4,14 @@ import { Crown, Crosshair, Users, AlertTriangle, ArrowRight, MessageSquare, File
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { useI18n } from "@/i18n/context";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Join() {
   const { t } = useI18n();
+  usePageMeta({
+    title: "Join Us",
+    description: "Apply to join VOID Esport. Alpha, Omega & Nexus divisions open for elite Brawl Stars players. Show us what you've got.",
+  });
 
   const divisions = [
     {

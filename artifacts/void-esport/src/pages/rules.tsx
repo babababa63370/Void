@@ -3,9 +3,14 @@ import { ShieldCheck, AlertTriangle, Ban, Gavel, Users, MessageSquare, Gamepad2,
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { useI18n } from "@/i18n/context";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Rules() {
   const { t } = useI18n();
+  usePageMeta({
+    title: "Code of Conduct",
+    description: "VOID Esport rules and code of conduct. Standards and expectations for all members across every division.",
+  });
 
   const sections = [
     {

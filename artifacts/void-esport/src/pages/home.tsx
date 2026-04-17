@@ -5,9 +5,14 @@ import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import logoPath from "@assets/purple_black_emblem_without_void_c4a1470f_1776350974040.png";
 import { useI18n } from "@/i18n/context";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 export default function Home() {
   const { t } = useI18n();
+  usePageMeta({
+    title: "Embrace The Void",
+    description: "The premier competitive Brawl Stars community. No mercy. No retreat. Only absolute dominance.",
+  });
 
   return (
     <div className="min-h-[100dvh] bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-x-hidden">
