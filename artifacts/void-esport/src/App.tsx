@@ -10,6 +10,7 @@ import Terms from "@/pages/terms";
 import Privacy from "@/pages/privacy";
 import Roster from "@/pages/roster";
 import PlayersLogin from "@/pages/players-login";
+import Meonix from "@/pages/meonix";
 import CookieBanner from "@/components/cookie-banner";
 import { I18nProvider, NON_EN_LANGS, type Lang } from "@/i18n/context";
 
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/terms" component={Terms} />
       <Route path="/privacy" component={Privacy} />
       <Route path="/players-login" component={PlayersLogin} />
+      <Route path="/meonix" component={Meonix} />
       <Route component={NotFound} />
     </Switch>
   );

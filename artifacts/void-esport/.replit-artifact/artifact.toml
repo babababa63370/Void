@@ -47,6 +47,10 @@ from = "/players-login"
 to = "/players-login.html"
 
 [[services.production.rewrites]]
+from = "/meonix"
+to = "/meonix.html"
+
+[[services.production.rewrites]]
 from = "/*"
 to = "/index.html"
 
