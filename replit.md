@@ -70,10 +70,18 @@ Competitive Brawl Stars esport clan site with cyberpunk/esports aesthetic.
 - Hero section: fluid logo sizing, progressive font scaling
 - Footer: 2-column grid on mobile, iOS safe-area padding
 
+### Player Profiles (`/roster/:username`)
+- Full-page profile editor at `src/pages/roster-player.tsx`
+- Customizable: page background (color/gradient/video), card background (color/gradient/image), avatar, banner, font, music, social links, Brawl Stars tag
+- `cardBackground` stored in `player_logins` table, applied to player cards on the roster page
+- All UI strings fully translated (EN/FR/ES/DE/PT): ~30 `player_*` keys
+
 ### Key Files
 - `src/App.tsx` — Router + I18nProvider + `getRouterBase()`
 - `src/i18n/context.tsx` — I18nProvider, useI18n, switchLang, IP detection
 - `src/pages/players-login.tsx` — Discord OAuth login page (Player Portal)
+- `src/pages/roster-player.tsx` — Player profile page + edit panel
+- `src/pages/roster.tsx` — Roster page with PlayerCard (uses cardBackground)
 - `src/pages/meonix.tsx` — Protected page (server-side JWT verification)
 - `src/hooks/usePageMeta.ts` — Dynamic title/meta + glitch effect
 - `vite.config.ts` — Multi-page build config + dev routing middleware
@@ -124,6 +132,10 @@ Drizzle ORM + PostgreSQL.
   - `discriminator` text — legacy `#0000` tag
   - `avatar` text — avatar hash (for CDN URL construction)
   - `last_login_at` timestamp
+  - `custom_avatar`, `banner`, `background`, `background_video` — profile customization
+  - `card_background` — card background shown on roster page (color/gradient/image URL)
+  - `font`, `music`, `links` (JSON), `brawl_tag` — profile extras
+  - `role` text — member role (alpha/omega/staff)
 
 ### Commands
 - `pnpm --filter @workspace/db run push` — push schema (interactive)

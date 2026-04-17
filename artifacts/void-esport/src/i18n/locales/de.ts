@@ -222,6 +222,33 @@ const de: Translations = {
   nf_achievements: "Erfolge",
   nf_join: "Beitreten",
   nf_copyright: "Alle Rechte vorbehalten",
+
+  // PLAYER PROFILE
+  player_editBtn: "Bearbeiten",
+  player_editTitle: "Mein Profil",
+  player_editAvatar: "Profilbild (URL)",
+  player_editAvatarHint: "Leer lassen für dein Discord-Profilbild",
+  player_editBanner: "Banner (Bild-URL)",
+  player_editPageBg: "Seitenhintergrund",
+  player_editCardBg: "Kartenhintergrund",
+  player_editCardBgDesc: "Farbe oder Bild auf deiner Roster-Karte",
+  player_editFont: "Schriftart",
+  player_editMusic: "Musik (Audio-URL)",
+  player_editMusicHint: "MP3, OGG, WAV — läuft in Schleife auf deinem Profil",
+  player_editLinksLabel: "Links",
+  player_editLinksLabelInput: "Bezeichnung (z.B. Twitter)",
+  player_editLinksAdd: "Link hinzufügen",
+  player_editBrawlTag: "Brawl Stars Tag",
+  player_editCancel: "Abbrechen",
+  player_editSaving: "Speichern...",
+  player_editSave: "Speichern",
+  player_bgColor: "Farbe",
+  player_bgVideo: "Video",
+  player_bgHexPlaceholder: "#hex oder linear-gradient(...)",
+  player_bgVideoHint: "MP4, WebM — läuft in Schleife als Seitenhintergrund",
+  player_musicPlaying: "Läuft",
+  player_musicPaused: "Abspielen",
+  player_profileFooter: "VOID Esport · Spielerprofil",
 };
 
 export default de;

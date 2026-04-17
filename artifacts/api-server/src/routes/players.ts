@@ -20,6 +20,7 @@ router.get("/players", async (_req, res) => {
       avatar: playerLoginsTable.avatar,
       discriminator: playerLoginsTable.discriminator,
       role: playerLoginsTable.role,
+      cardBackground: playerLoginsTable.cardBackground,
     })
     .from(playerLoginsTable)
     .where(isNotNull(playerLoginsTable.role));
@@ -64,7 +65,7 @@ router.patch("/players/me", async (req, res) => {
     return;
   }
 
-  const { customAvatar, banner, background, font, music, links, brawlTag, backgroundVideo } = req.body as {
+  const { customAvatar, banner, background, font, music, links, brawlTag, backgroundVideo, cardBackground } = req.body as {
     customAvatar?: string | null;
     banner?: string | null;
     background?: string | null;
@@ -73,6 +74,7 @@ router.patch("/players/me", async (req, res) => {
     links?: string | null;
     brawlTag?: string | null;
     backgroundVideo?: string | null;
+    cardBackground?: string | null;
   };
 
   await db
@@ -86,6 +88,7 @@ router.patch("/players/me", async (req, res) => {
       links: links ?? null,
       brawlTag: brawlTag ?? null,
       backgroundVideo: backgroundVideo ?? null,
+      cardBackground: cardBackground ?? null,
     })
     .where(eq(playerLoginsTable.discordId, discordId));
 

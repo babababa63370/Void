@@ -7,6 +7,7 @@ import {
   Image, Video, Palette,
 } from "lucide-react";
 import { SiDiscord } from "react-icons/si";
+import { useI18n } from "@/i18n/context";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import NotFound from "@/pages/not-found";
 
@@ -22,6 +23,7 @@ interface ProfileData {
   banner: string | null;
   background: string | null;
   backgroundVideo: string | null;
+  cardBackground: string | null;
   font: string | null;
   music: string | null;
   links: string | null;
@@ -32,6 +34,7 @@ interface LinkItem { label: string; url: string }
 interface Session { discordId: string; token: string }
 
 type BgMode = "style" | "image-url" | "video";
+type CardBgMode = "style" | "image-url";
 
 interface EditState {
   customAvatar: string;
@@ -39,6 +42,8 @@ interface EditState {
   background: string;
   backgroundVideo: string;
   bgMode: BgMode;
+  cardBackground: string;
+  cardBgMode: CardBgMode;
   font: string;
   music: string;
   links: LinkItem[];
@@ -115,9 +120,16 @@ function detectBgMode(bg: string | null, vid: string | null): BgMode {
   return "style";
 }
 
+function detectCardBgMode(bg: string | null): CardBgMode {
+  if (!bg) return "style";
+  if (bg.startsWith("http")) return "image-url";
+  return "style";
+}
+
 // ─── Music Player ─────────────────────────────────────────────────────────────
 
 function MusicPlayer({ src }: { src: string }) {
+  const { t } = useI18n();
   const [playing, setPlaying] = useState(false);
   const audioRef = useRef<HTMLAudioElement>(null);
 
@@ -148,7 +160,7 @@ function MusicPlayer({ src }: { src: string }) {
         className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 px-4 py-2.5 bg-black/60 backdrop-blur-md border border-white/15 text-white text-xs font-orbitron uppercase tracking-wider shadow-xl"
       >
         {playing ? <Music className="w-3.5 h-3.5 text-primary animate-pulse" /> : <Music2 className="w-3.5 h-3.5 text-muted-foreground/60" />}
-        {playing ? "En lecture" : "Lecture"}
+        {playing ? t("player_musicPlaying") : t("player_musicPaused")}
       </motion.button>
     </>
   );
@@ -162,6 +174,8 @@ function BgSection({
   data: EditState;
   onChange: (updates: Partial<EditState>) => void;
 }) {
+  const { t } = useI18n();
+
   const modeBtn = (mode: BgMode, icon: React.ReactNode, label: string) => (
     <button
       onClick={() => onChange({ bgMode: mode, ...(mode === "video" ? { background: "" } : { backgroundVideo: "" }) })}
@@ -174,14 +188,12 @@ function BgSection({
 
   return (
     <div className="space-y-3">
-      {/* Mode selector */}
       <div className="flex gap-1.5">
-        {modeBtn("style", <Palette className="w-3.5 h-3.5" />, "Couleur")}
+        {modeBtn("style", <Palette className="w-3.5 h-3.5" />, t("player_bgColor"))}
         {modeBtn("image-url", <Image className="w-3.5 h-3.5" />, "Image URL")}
-        {modeBtn("video", <Video className="w-3.5 h-3.5" />, "Vidéo")}
+        {modeBtn("video", <Video className="w-3.5 h-3.5" />, t("player_bgVideo"))}
       </div>
 
-      {/* Style (color/gradient) */}
       {data.bgMode === "style" && (
         <div className="space-y-2">
           <div className="flex flex-wrap gap-1.5">
@@ -199,12 +211,11 @@ function BgSection({
             className="w-full bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50 font-mono"
             value={data.background}
             onChange={(e) => onChange({ background: e.target.value })}
-            placeholder="#hex ou linear-gradient(...)"
+            placeholder={t("player_bgHexPlaceholder")}
           />
         </div>
       )}
 
-      {/* Image URL */}
       {data.bgMode === "image-url" && (
         <input
           className="w-full bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50 font-mono"
@@ -214,7 +225,6 @@ function BgSection({
         />
       )}
 
-      {/* Video URL */}
       {data.bgMode === "video" && (
         <div className="space-y-2">
           <input
@@ -223,7 +233,76 @@ function BgSection({
             onChange={(e) => onChange({ backgroundVideo: e.target.value })}
             placeholder="https://...video.mp4"
           />
-          <p className="text-[10px] text-white/25">MP4, WebM — joue en boucle en fond de profil</p>
+          <p className="text-[10px] text-white/25">{t("player_bgVideoHint")}</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Card BG Section in Edit Panel ────────────────────────────────────────────
+
+function CardBgSection({
+  data, onChange,
+}: {
+  data: EditState;
+  onChange: (updates: Partial<EditState>) => void;
+}) {
+  const { t } = useI18n();
+
+  const modeBtn = (mode: CardBgMode, icon: React.ReactNode, label: string) => (
+    <button
+      onClick={() => onChange({ cardBgMode: mode })}
+      className={`flex-1 flex flex-col items-center gap-1 py-2.5 border text-[10px] font-orbitron uppercase tracking-wider transition-all ${data.cardBgMode === mode ? "border-primary text-primary bg-primary/10" : "border-white/10 text-white/40 hover:border-white/20"}`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="space-y-3">
+      <p className="text-[10px] text-white/30">{t("player_editCardBgDesc")}</p>
+      <div className="flex gap-1.5">
+        {modeBtn("style", <Palette className="w-3.5 h-3.5" />, t("player_bgColor"))}
+        {modeBtn("image-url", <Image className="w-3.5 h-3.5" />, "Image URL")}
+      </div>
+
+      {data.cardBgMode === "style" && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-1.5">
+            {BG_PRESETS.map((p) => (
+              <button
+                key={p.v}
+                onClick={() => onChange({ cardBackground: p.v })}
+                className={`px-2.5 py-1.5 text-[10px] font-orbitron uppercase tracking-wider border transition-all ${data.cardBackground === p.v ? "border-primary text-primary" : "border-white/10 text-white/50"}`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <input
+            className="w-full bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50 font-mono"
+            value={data.cardBackground}
+            onChange={(e) => onChange({ cardBackground: e.target.value })}
+            placeholder={t("player_bgHexPlaceholder")}
+          />
+        </div>
+      )}
+
+      {data.cardBgMode === "image-url" && (
+        <div className="space-y-2">
+          <input
+            className="w-full bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50 font-mono"
+            value={data.cardBackground}
+            onChange={(e) => onChange({ cardBackground: e.target.value })}
+            placeholder="https://...image.jpg"
+          />
+          {data.cardBackground?.startsWith("http") && (
+            <div className="relative h-14 overflow-hidden border border-white/10">
+              <img src={data.cardBackground} alt="" className="w-full h-full object-cover" />
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -238,6 +317,7 @@ function EditPanel({
   initial: EditState; token: string;
   onSave: (d: EditState) => void; onClose: () => void;
 }) {
+  const { t } = useI18n();
   const [data, setData] = useState<EditState>(initial);
   const [saving, setSaving] = useState(false);
 
@@ -278,6 +358,7 @@ function EditPanel({
           banner: data.banner || null,
           background: isVideo ? null : (data.background || null),
           backgroundVideo: isVideo ? (data.backgroundVideo || null) : null,
+          cardBackground: data.cardBackground || null,
           font: data.font || null,
           music: data.music || null,
           links: data.links.filter((l) => l.label || l.url).length
@@ -315,7 +396,7 @@ function EditPanel({
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/5 shrink-0">
           <div className="flex items-center gap-2">
             <Pencil className="w-4 h-4 text-primary" />
-            <h2 className="font-orbitron font-bold text-sm uppercase tracking-widest text-white">Mon profil</h2>
+            <h2 className="font-orbitron font-bold text-sm uppercase tracking-widest text-white">{t("player_editTitle")}</h2>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-white/60 hover:text-white transition-colors">
             <X className="w-4 h-4" />
@@ -327,26 +408,32 @@ function EditPanel({
 
           {/* Photo de profil */}
           <div className={sectionCls}>
-            <label className={labelCls}>Photo de profil (URL)</label>
+            <label className={labelCls}>{t("player_editAvatar")}</label>
             <input className={inputCls} value={data.customAvatar} onChange={(e) => set("customAvatar", e.target.value)} placeholder="https://..." />
-            <p className="text-[10px] text-white/25 mt-1">Laisse vide pour utiliser ta photo Discord</p>
+            <p className="text-[10px] text-white/25 mt-1">{t("player_editAvatarHint")}</p>
           </div>
 
           {/* Bannière */}
           <div className={sectionCls}>
-            <label className={labelCls}>Bannière (URL image)</label>
+            <label className={labelCls}>{t("player_editBanner")}</label>
             <input className={inputCls} value={data.banner} onChange={(e) => set("banner", e.target.value)} placeholder="https://...banner.jpg" />
           </div>
 
-          {/* Fond */}
+          {/* Fond de page */}
           <div className={sectionCls}>
-            <label className={labelCls}>Fond de page</label>
+            <label className={labelCls}>{t("player_editPageBg")}</label>
             <BgSection data={data} onChange={update} />
+          </div>
+
+          {/* Fond de carte */}
+          <div className={sectionCls}>
+            <label className={labelCls}>{t("player_editCardBg")}</label>
+            <CardBgSection data={data} onChange={update} />
           </div>
 
           {/* Police */}
           <div className={sectionCls}>
-            <label className={labelCls}>Police</label>
+            <label className={labelCls}>{t("player_editFont")}</label>
             <div className="grid grid-cols-2 gap-1.5">
               {FONTS.map((f) => (
                 <button
@@ -363,19 +450,19 @@ function EditPanel({
 
           {/* Musique */}
           <div className={sectionCls}>
-            <label className={labelCls}>Musique (URL audio)</label>
+            <label className={labelCls}>{t("player_editMusic")}</label>
             <input className={inputCls} value={data.music} onChange={(e) => set("music", e.target.value)} placeholder="https://.../song.mp3" />
-            <p className="text-[10px] text-white/25 mt-1">MP3, OGG, WAV — joue en boucle sur ton profil</p>
+            <p className="text-[10px] text-white/25 mt-1">{t("player_editMusicHint")}</p>
           </div>
 
           {/* Liens */}
           <div className={sectionCls}>
-            <label className={labelCls}>Liens ({data.links.length}/5)</label>
+            <label className={labelCls}>{t("player_editLinksLabel")} ({data.links.length}/5)</label>
             <div className="space-y-2">
               {data.links.map((link, i) => (
                 <div key={i} className="flex gap-1.5">
                   <div className="flex-1 space-y-1">
-                    <input className={inputCls} value={link.label} onChange={(e) => setLink(i, "label", e.target.value)} placeholder="Label (ex: Twitter)" />
+                    <input className={inputCls} value={link.label} onChange={(e) => setLink(i, "label", e.target.value)} placeholder={t("player_editLinksLabelInput")} />
                     <input className={inputCls} value={link.url} onChange={(e) => setLink(i, "url", e.target.value)} placeholder="https://..." />
                   </div>
                   <button onClick={() => removeLink(i)} className="self-center w-8 h-8 flex items-center justify-center text-red-400/60 hover:text-red-400 transition-colors shrink-0">
@@ -385,7 +472,7 @@ function EditPanel({
               ))}
               {data.links.length < 5 && (
                 <button onClick={addLink} className="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed border-white/15 hover:border-white/30 text-xs font-orbitron uppercase tracking-wider text-white/40 hover:text-white/60 transition-all">
-                  <Plus className="w-3.5 h-3.5" /> Ajouter un lien
+                  <Plus className="w-3.5 h-3.5" /> {t("player_editLinksAdd")}
                 </button>
               )}
             </div>
@@ -393,7 +480,7 @@ function EditPanel({
 
           {/* Tag Brawl Stars */}
           <div className="space-y-1.5">
-            <label className={labelCls}>Tag Brawl Stars</label>
+            <label className={labelCls}>{t("player_editBrawlTag")}</label>
             <input className={inputCls} value={data.brawlTag} onChange={(e) => set("brawlTag", e.target.value)} placeholder="#XXXXXX" />
           </div>
         </div>
@@ -401,7 +488,7 @@ function EditPanel({
         {/* Footer */}
         <div className="px-5 py-4 border-t border-white/5 shrink-0 flex gap-3">
           <button onClick={onClose} disabled={saving} className="flex-1 py-3 border border-white/10 text-white/60 text-xs font-orbitron uppercase tracking-wider hover:bg-white/5 transition-colors">
-            Annuler
+            {t("player_editCancel")}
           </button>
           <button
             onClick={() => void save()}
@@ -409,7 +496,7 @@ function EditPanel({
             className="flex-1 py-3 bg-primary hover:bg-primary/90 text-white text-xs font-orbitron uppercase tracking-wider flex items-center justify-center gap-2 transition-colors"
           >
             {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-            {saving ? "Sauvegarde…" : "Sauvegarder"}
+            {saving ? t("player_editSaving") : t("player_editSave")}
           </button>
         </div>
       </motion.div>
@@ -420,6 +507,7 @@ function EditPanel({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function RosterPlayer() {
+  const { t } = useI18n();
   const { username } = useParams<{ username: string }>();
   const [, navigate] = useLocation();
   const decodedUsername = decodeURIComponent(username ?? "");
@@ -460,6 +548,7 @@ export default function RosterPlayer() {
       banner: d.banner || null,
       background: isVideo ? null : (d.background || null),
       backgroundVideo: isVideo ? (d.backgroundVideo || null) : null,
+      cardBackground: d.cardBackground || null,
       font: d.font || null,
       music: d.music || null,
       links: d.links.length ? JSON.stringify(d.links.filter((l) => l.label || l.url)) : null,
@@ -491,6 +580,8 @@ export default function RosterPlayer() {
     background: player.background ?? "",
     backgroundVideo: player.backgroundVideo ?? "",
     bgMode: detectBgMode(player.background, player.backgroundVideo),
+    cardBackground: player.cardBackground ?? "",
+    cardBgMode: detectCardBgMode(player.cardBackground),
     font: player.font ?? "Orbitron",
     music: player.music ?? "",
     links: parseLinks(player.links),
@@ -530,7 +621,7 @@ export default function RosterPlayer() {
           className="pointer-events-auto flex items-center gap-2 px-3 py-2 bg-black/50 backdrop-blur-md border border-white/10 text-white/70 hover:text-white text-xs font-orbitron uppercase tracking-wider transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">Roster</span>
+          <span className="hidden sm:inline">{t("nav_roster")}</span>
         </button>
 
         {isOwn && (
@@ -539,7 +630,7 @@ export default function RosterPlayer() {
             className="pointer-events-auto flex items-center gap-2 px-3 py-2 bg-primary/80 backdrop-blur-md border border-primary/40 text-white text-xs font-orbitron uppercase tracking-wider hover:bg-primary transition-colors"
           >
             <Pencil className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Modifier</span>
+            <span className="hidden sm:inline">{t("player_editBtn")}</span>
           </button>
         )}
       </div>
@@ -630,7 +721,7 @@ export default function RosterPlayer() {
           )}
 
           <p className="text-center text-[10px] text-white/15 font-orbitron uppercase tracking-widest mt-8">
-            VOID Esport · Profil Joueur
+            {t("player_profileFooter")}
           </p>
         </div>
       </div>

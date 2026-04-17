@@ -14,6 +14,7 @@ interface Player {
   avatar: string | null;
   discriminator: string;
   role: string | null;
+  cardBackground: string | null;
 }
 
 function avatarUrl(discordId: string, avatar: string | null, discriminator: string): string {
@@ -28,6 +29,12 @@ function avatarUrl(discordId: string, avatar: string | null, discriminator: stri
 
 function PlayerCard({ player, index }: { player: Player; index: number }) {
   const href = `/roster/${encodeURIComponent(player.username)}`;
+  const isImageCard = player.cardBackground?.startsWith("http");
+  const cardStyle = player.cardBackground
+    ? isImageCard
+      ? { backgroundImage: `url("${player.cardBackground}")`, backgroundSize: "cover", backgroundPosition: "center" }
+      : { background: player.cardBackground }
+    : undefined;
 
   return (
     <Link href={href}>
@@ -37,7 +44,9 @@ function PlayerCard({ player, index }: { player: Player; index: number }) {
         viewport={{ once: true, margin: "-40px" }}
         transition={{ duration: 0.35, delay: index * 0.06 }}
         className="group relative bg-[#0a0a0e] border border-white/8 hover:border-primary/40 transition-all duration-300 overflow-hidden cursor-pointer block"
+        style={cardStyle}
       >
+        {isImageCard && <div className="absolute inset-0 bg-black/50" />}
         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
         {/* Mobile */}
