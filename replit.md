@@ -57,6 +57,18 @@ Competitive Brawl Stars esport clan site with cyberpunk/esports aesthetic.
 - All text uses `useI18n()` hook with `t('key')` — ~150 translation keys
 - Brand taglines ("Embrace The Void", "VOID") kept untranslated
 
+### SEO & Meta Tags
+- **Multi-page Vite build**: each route has its own HTML file (`index.html`, `roster.html`, `join.html`, `rules.html`, `terms.html`, `privacy.html`) with static OG/Twitter meta tags baked in — readable by bots without JavaScript
+- **Dev server**: inline Vite plugin (`per-page-html`) maps routes to correct HTML files (e.g. `/roster` → `roster.html`)
+- **Production**: `artifact.toml` rewrites serve the correct HTML per route before the `/*` catch-all
+- **`usePageMeta` hook** (`src/hooks/usePageMeta.ts`): updates `document.title`, description, og:title/description/url dynamically at runtime + glitch effect every 5s (briefly replaces 2–4 chars with cyberpunk symbols for 120ms)
+
+### Mobile Design
+- Responsive navbar with animated hamburger menu (Framer Motion), body scroll lock when open, 44px touch targets
+- Hero section: fluid logo sizing (`w-36 sm:w-48 md:w-64`), progressive font scaling (`text-4xl sm:text-6xl md:text-8xl`)
+- Footer: 2-column grid on mobile, iOS safe-area padding
+- All sections use responsive Tailwind variants for padding, font size, and grid columns
+
 ### Key Files
 - `src/App.tsx` — Router + I18nProvider + `getRouterBase()`
 - `src/i18n/context.tsx` — I18nProvider, useI18n, switchLang, IP detection
@@ -64,3 +76,7 @@ Competitive Brawl Stars esport clan site with cyberpunk/esports aesthetic.
 - `src/i18n/locales/{fr,es,de,pt}.ts` — Full translations
 - `src/pages/roster.tsx` — Roster with PlayerCard + OpenSlotCard
 - `src/components/layout/navbar.tsx` — Responsive navbar + lang switcher
+- `src/hooks/usePageMeta.ts` — Dynamic title/meta + glitch effect
+- `index.html`, `roster.html`, `join.html`, `rules.html`, `terms.html`, `privacy.html` — Static HTML entry points per route
+- `vite.config.ts` — Multi-page build config + dev routing middleware
+- `public/logo.png` — Brand logo (apple-touch-icon, OG image)
