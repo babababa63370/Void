@@ -1,11 +1,13 @@
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, type ChangeEvent } from "react";
 import { useParams, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Crown, Crosshair, UserCheck, ArrowLeft, Pencil, X,
   Music, Music2, Link2, Plus, Trash2, Loader2, Save, ExternalLink,
+  Image, Upload, Video, Palette,
 } from "lucide-react";
 import { SiDiscord } from "react-icons/si";
+import { useUpload } from "@workspace/object-storage-web";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import NotFound from "@/pages/not-found";
 
@@ -20,6 +22,7 @@ interface ProfileData {
   customAvatar: string | null;
   banner: string | null;
   background: string | null;
+  backgroundVideo: string | null;
   font: string | null;
   music: string | null;
   links: string | null;
@@ -29,10 +32,14 @@ interface ProfileData {
 interface LinkItem { label: string; url: string }
 interface Session { discordId: string; token: string }
 
+type BgMode = "style" | "image-url" | "image-upload" | "video";
+
 interface EditState {
   customAvatar: string;
   banner: string;
   background: string;
+  backgroundVideo: string;
+  bgMode: BgMode;
   font: string;
   music: string;
   links: LinkItem[];
@@ -102,10 +109,12 @@ function loadFont(name: string | null) {
   document.head.appendChild(el);
 }
 
-function bgStyle(bg: string | null): string {
-  const v = bg || DEFAULT_BG;
-  if (v.startsWith("http")) return `url("${v}")`;
-  return v;
+function detectBgMode(bg: string | null, vid: string | null): BgMode {
+  if (vid) return "video";
+  if (!bg) return "style";
+  if (bg.startsWith("/api/storage")) return "image-upload";
+  if (bg.startsWith("http")) return "image-url";
+  return "style";
 }
 
 // ─── Music Player ─────────────────────────────────────────────────────────────
@@ -147,6 +156,122 @@ function MusicPlayer({ src }: { src: string }) {
   );
 }
 
+// ─── BG Section in Edit Panel ─────────────────────────────────────────────────
+
+function BgSection({
+  data, onChange,
+}: {
+  data: EditState;
+  onChange: (updates: Partial<EditState>) => void;
+}) {
+  const { uploadFile, isUploading, progress } = useUpload({
+    onSuccess: (res) => onChange({ background: `/api/storage${res.objectPath}`, bgMode: "image-upload" }),
+    onError: (err) => console.error("Upload error:", err),
+  });
+
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const modeBtn = (mode: BgMode, icon: React.ReactNode, label: string) => (
+    <button
+      onClick={() => onChange({ bgMode: mode, ...(mode === "video" ? { background: "" } : { backgroundVideo: "" }) })}
+      className={`flex-1 flex flex-col items-center gap-1 py-2.5 border text-[10px] font-orbitron uppercase tracking-wider transition-all ${data.bgMode === mode ? "border-primary text-primary bg-primary/10" : "border-white/10 text-white/40 hover:border-white/20"}`}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+
+  return (
+    <div className="space-y-3">
+      {/* Mode selector */}
+      <div className="flex gap-1.5">
+        {modeBtn("style", <Palette className="w-3.5 h-3.5" />, "Couleur")}
+        {modeBtn("image-url", <Image className="w-3.5 h-3.5" />, "Image URL")}
+        {modeBtn("image-upload", <Upload className="w-3.5 h-3.5" />, "Upload")}
+        {modeBtn("video", <Video className="w-3.5 h-3.5" />, "Vidéo")}
+      </div>
+
+      {/* Style (color/gradient) */}
+      {data.bgMode === "style" && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-1.5">
+            {BG_PRESETS.map((p) => (
+              <button
+                key={p.v}
+                onClick={() => onChange({ background: p.v })}
+                className={`px-2.5 py-1.5 text-[10px] font-orbitron uppercase tracking-wider border transition-all ${data.background === p.v ? "border-primary text-primary" : "border-white/10 text-white/50"}`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <input
+            className="w-full bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50 font-mono"
+            value={data.background}
+            onChange={(e) => onChange({ background: e.target.value })}
+            placeholder="#hex ou linear-gradient(...)"
+          />
+        </div>
+      )}
+
+      {/* Image URL */}
+      {data.bgMode === "image-url" && (
+        <input
+          className="w-full bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50 font-mono"
+          value={data.background}
+          onChange={(e) => onChange({ background: e.target.value })}
+          placeholder="https://...image.jpg"
+        />
+      )}
+
+      {/* Image upload */}
+      {data.bgMode === "image-upload" && (
+        <div className="space-y-2">
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={async (e: ChangeEvent<HTMLInputElement>) => {
+              const file = e.target.files?.[0];
+              if (file) await uploadFile(file);
+              e.target.value = "";
+            }}
+          />
+          <button
+            onClick={() => fileRef.current?.click()}
+            disabled={isUploading}
+            className="w-full flex items-center justify-center gap-2 py-3 border border-dashed border-primary/40 hover:border-primary/70 text-xs font-orbitron uppercase tracking-wider text-primary/70 hover:text-primary transition-all disabled:opacity-50"
+          >
+            {isUploading ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> {progress}%</> : <><Upload className="w-3.5 h-3.5" /> Choisir une image</>}
+          </button>
+          {data.background?.startsWith("/api/storage") && (
+            <div className="relative h-16 overflow-hidden border border-white/10">
+              <img src={data.background} alt="Aperçu fond" className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                <span className="text-[10px] font-orbitron text-white/60 uppercase tracking-wider">Image enregistrée</span>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Video URL */}
+      {data.bgMode === "video" && (
+        <div className="space-y-2">
+          <input
+            className="w-full bg-white/5 border border-white/10 px-3 py-2.5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-primary/50 font-mono"
+            value={data.backgroundVideo}
+            onChange={(e) => onChange({ backgroundVideo: e.target.value })}
+            placeholder="https://...video.mp4"
+          />
+          <p className="text-[10px] text-white/25">MP4, WebM — joue en boucle en fond de profil</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Edit Panel ───────────────────────────────────────────────────────────────
 
 function EditPanel({
@@ -160,6 +285,10 @@ function EditPanel({
 
   function set<K extends keyof EditState>(k: K, v: EditState[K]) {
     setData((prev) => ({ ...prev, [k]: v }));
+  }
+
+  function update(updates: Partial<EditState>) {
+    setData((prev) => ({ ...prev, ...updates }));
   }
 
   function setLink(i: number, field: keyof LinkItem, v: string) {
@@ -182,13 +311,15 @@ function EditPanel({
   async function save() {
     setSaving(true);
     try {
+      const isVideo = data.bgMode === "video";
       await fetch("/api/players/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           customAvatar: data.customAvatar || null,
           banner: data.banner || null,
-          background: data.background || null,
+          background: isVideo ? null : (data.background || null),
+          backgroundVideo: isVideo ? (data.backgroundVideo || null) : null,
           font: data.font || null,
           music: data.music || null,
           links: data.links.filter((l) => l.label || l.url).length
@@ -214,10 +345,7 @@ function EditPanel({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
     >
-      {/* Backdrop */}
       <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
-
-      {/* Panel */}
       <motion.div
         className="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-[#0d0d12] border-l border-white/10 flex flex-col shadow-2xl"
         initial={{ x: "100%" }}
@@ -236,7 +364,7 @@ function EditPanel({
           </button>
         </div>
 
-        {/* Scrollable fields */}
+        {/* Fields */}
         <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5 no-scrollbar">
 
           {/* Photo de profil */}
@@ -249,24 +377,13 @@ function EditPanel({
           {/* Bannière */}
           <div className={sectionCls}>
             <label className={labelCls}>Bannière (URL image)</label>
-            <input className={inputCls} value={data.banner} onChange={(e) => set("banner", e.target.value)} placeholder="https://..." />
+            <input className={inputCls} value={data.banner} onChange={(e) => set("banner", e.target.value)} placeholder="https://...banner.jpg" />
           </div>
 
           {/* Fond */}
           <div className={sectionCls}>
             <label className={labelCls}>Fond de page</label>
-            <div className="flex flex-wrap gap-1.5 mb-2.5">
-              {BG_PRESETS.map((p) => (
-                <button
-                  key={p.v}
-                  onClick={() => set("background", p.v)}
-                  className={`px-2.5 py-1.5 text-[10px] font-orbitron uppercase tracking-wider border transition-all ${data.background === p.v ? "border-primary text-primary bg-primary/10" : "border-white/10 text-white/50 hover:border-white/20"}`}
-                >
-                  {p.label}
-                </button>
-              ))}
-            </div>
-            <input className={inputCls} value={data.background} onChange={(e) => set("background", e.target.value)} placeholder="#hex ou linear-gradient(...) ou https://..." />
+            <BgSection data={data} onChange={update} />
           </div>
 
           {/* Police */}
@@ -321,7 +438,6 @@ function EditPanel({
             <label className={labelCls}>Tag Brawl Stars</label>
             <input className={inputCls} value={data.brawlTag} onChange={(e) => set("brawlTag", e.target.value)} placeholder="#XXXXXX" />
           </div>
-
         </div>
 
         {/* Footer */}
@@ -376,18 +492,19 @@ export default function RosterPlayer() {
   }, [decodedUsername]);
 
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
-
   useEffect(() => { if (player?.font) loadFont(player.font); }, [player?.font]);
 
   const handleSave = useCallback((d: EditState) => {
+    const isVideo = d.bgMode === "video";
     setPlayer((prev) => prev ? {
       ...prev,
       customAvatar: d.customAvatar || null,
       banner: d.banner || null,
-      background: d.background || null,
+      background: isVideo ? null : (d.background || null),
+      backgroundVideo: isVideo ? (d.backgroundVideo || null) : null,
       font: d.font || null,
       music: d.music || null,
-      links: d.links.length ? JSON.stringify(d.links) : null,
+      links: d.links.length ? JSON.stringify(d.links.filter((l) => l.label || l.url)) : null,
       brawlTag: d.brawlTag || null,
     } : prev);
     loadFont(d.font || null);
@@ -406,13 +523,16 @@ export default function RosterPlayer() {
   const role = ROLE_CONFIG[player.role as keyof typeof ROLE_CONFIG];
   const links = parseLinks(player.links);
   const fontFamily = player.font || "Orbitron";
-  const bg = bgStyle(player.background);
-  const isImage = player.background?.startsWith("http");
+  const hasVideo = !!player.backgroundVideo;
+  const bg = player.background || DEFAULT_BG;
+  const isImageBg = bg.startsWith("http") || bg.startsWith("/api/storage");
 
   const editInitial: EditState = {
     customAvatar: player.customAvatar ?? "",
     banner: player.banner ?? "",
     background: player.background ?? "",
+    backgroundVideo: player.backgroundVideo ?? "",
+    bgMode: detectBgMode(player.background, player.backgroundVideo),
     font: player.font ?? "Orbitron",
     music: player.music ?? "",
     links: parseLinks(player.links),
@@ -420,12 +540,30 @@ export default function RosterPlayer() {
   };
 
   return (
-    <div
-      className="min-h-[100dvh] relative overflow-x-hidden"
-      style={isImage ? { backgroundImage: bg, backgroundSize: "cover", backgroundPosition: "center" } : { background: bg }}
-    >
-      {/* Dark overlay for readability when using image bg */}
-      {isImage && <div className="absolute inset-0 bg-black/50 pointer-events-none" />}
+    <div className="min-h-[100dvh] relative overflow-x-hidden">
+      {/* ── Background ── */}
+      {hasVideo ? (
+        <video
+          key={player.backgroundVideo!}
+          src={player.backgroundVideo!}
+          autoPlay
+          loop
+          muted
+          playsInline
+          className="fixed inset-0 w-full h-full object-cover z-0"
+        />
+      ) : isImageBg ? (
+        <div
+          className="fixed inset-0 z-0 bg-cover bg-center"
+          style={{ backgroundImage: `url("${bg}")` }}
+        />
+      ) : (
+        <div className="fixed inset-0 z-0" style={{ background: bg }} />
+      )}
+      {/* Overlay for readability on images/videos */}
+      {(hasVideo || isImageBg) && (
+        <div className="fixed inset-0 z-0 bg-black/50" />
+      )}
 
       {/* ── Fixed overlay buttons ── */}
       <div className="fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 pt-4 pb-2 pointer-events-none">
@@ -448,99 +586,95 @@ export default function RosterPlayer() {
         )}
       </div>
 
-      {/* ── Banner ── */}
-      <div
-        className="relative w-full h-44 sm:h-56"
-        style={
-          player.banner
-            ? { backgroundImage: `url("${player.banner}")`, backgroundSize: "cover", backgroundPosition: "center" }
-            : { background: role ? `linear-gradient(135deg, ${role.glow}33, transparent)` : "rgba(124,58,237,0.1)" }
-        }
-      >
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/40" />
-        {!player.banner && (
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px]" />
-        )}
-      </div>
-
-      {/* ── Content ── */}
-      <div className="relative z-10 max-w-lg mx-auto px-4 pb-24">
-
-        {/* Avatar — overlaps banner */}
-        <div className="flex flex-col items-center -mt-16">
-          <div className="relative">
-            <div
-              className="absolute inset-0 rounded-full blur-2xl scale-110 opacity-60"
-              style={{ background: role?.glow ?? "rgba(124,58,237,0.4)" }}
-            />
-            <img
-              src={getAvatar(player)}
-              alt={player.username}
-              className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-black/50 relative z-10 object-cover shadow-2xl"
-            />
-          </div>
+      {/* ── Content (above backgrounds) ── */}
+      <div className="relative z-10">
+        {/* Banner */}
+        <div
+          className="w-full h-44 sm:h-56"
+          style={
+            player.banner
+              ? { backgroundImage: `url("${player.banner}")`, backgroundSize: "cover", backgroundPosition: "center" }
+              : { background: role ? `linear-gradient(135deg, ${role.glow}33, transparent)` : "rgba(124,58,237,0.1)" }
+          }
+        >
+          <div className="w-full h-full bg-gradient-to-b from-transparent to-black/40" />
+          {!player.banner && (
+            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+          )}
         </div>
 
-        {/* Name + info */}
-        <div className="flex flex-col items-center mt-4 mb-6">
-          <h1
-            style={{ fontFamily }}
-            className="font-bold text-2xl sm:text-3xl uppercase tracking-widest text-white text-center mb-2 drop-shadow-[0_0_20px_rgba(124,58,237,0.5)]"
-          >
-            {player.username}
-          </h1>
+        {/* Avatar + info */}
+        <div className="max-w-lg mx-auto px-4 pb-24">
+          <div className="flex flex-col items-center -mt-16">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-full blur-2xl scale-110 opacity-60" style={{ background: role?.glow ?? "rgba(124,58,237,0.4)" }} />
+              <img
+                src={getAvatar(player)}
+                alt={player.username}
+                className="w-28 h-28 sm:w-32 sm:h-32 rounded-full border-4 border-black/50 relative z-10 object-cover shadow-2xl"
+              />
+            </div>
+          </div>
 
-          {player.brawlTag && (
-            <div className="flex items-center gap-1.5 text-sm font-mono text-white/60 mb-3">
-              <span className="text-primary font-bold">#</span>
-              {player.brawlTag.replace(/^#/, "")}
+          <div className="flex flex-col items-center mt-4 mb-6">
+            <h1
+              style={{ fontFamily }}
+              className="font-bold text-2xl sm:text-3xl uppercase tracking-widest text-white text-center mb-2 drop-shadow-[0_0_20px_rgba(124,58,237,0.5)]"
+            >
+              {player.username}
+            </h1>
+
+            {player.brawlTag && (
+              <div className="flex items-center gap-1.5 text-sm font-mono text-white/60 mb-3">
+                <span className="text-primary font-bold">#</span>
+                {player.brawlTag.replace(/^#/, "")}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 flex-wrap justify-center">
+              {role && (
+                <span className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs font-orbitron uppercase tracking-widest ${role.color} ${role.border} ${role.bg}`}>
+                  <role.Icon className="w-3 h-3" />
+                  Division {role.label}
+                </span>
+              )}
+              <span className="flex items-center gap-1.5 px-3 py-1.5 border border-[#5865F2]/30 bg-[#5865F2]/10 text-[#5865F2] text-xs font-orbitron uppercase tracking-widest">
+                <SiDiscord className="w-3 h-3" />
+                VOID Esport
+              </span>
+            </div>
+          </div>
+
+          {/* Links */}
+          {links.length > 0 && (
+            <div className="space-y-2 mb-6">
+              {links.map((link, i) => (
+                <motion.a
+                  key={i}
+                  href={link.url.startsWith("http") ? link.url : `https://${link.url}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.06 }}
+                  className="flex items-center justify-between px-5 py-3.5 bg-black/40 backdrop-blur-sm border border-white/10 hover:border-white/25 hover:bg-black/60 transition-all group"
+                >
+                  <div className="flex items-center gap-3">
+                    <Link2 className="w-3.5 h-3.5 text-primary/70" />
+                    <span style={{ fontFamily }} className="text-sm font-bold text-white uppercase tracking-wider">
+                      {link.label || link.url}
+                    </span>
+                  </div>
+                  <ExternalLink className="w-3.5 h-3.5 text-white/20 group-hover:text-white/50 transition-colors" />
+                </motion.a>
+              ))}
             </div>
           )}
 
-          <div className="flex items-center gap-2 flex-wrap justify-center">
-            {role && (
-              <span className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs font-orbitron uppercase tracking-widest ${role.color} ${role.border} ${role.bg}`}>
-                <role.Icon className="w-3 h-3" />
-                Division {role.label}
-              </span>
-            )}
-            <span className="flex items-center gap-1.5 px-3 py-1.5 border border-[#5865F2]/30 bg-[#5865F2]/10 text-[#5865F2] text-xs font-orbitron uppercase tracking-widest">
-              <SiDiscord className="w-3 h-3" />
-              VOID Esport
-            </span>
-          </div>
+          <p className="text-center text-[10px] text-white/15 font-orbitron uppercase tracking-widest mt-8">
+            VOID Esport · Profil Joueur
+          </p>
         </div>
-
-        {/* Links */}
-        {links.length > 0 && (
-          <div className="space-y-2 mb-6">
-            {links.map((link, i) => (
-              <motion.a
-                key={i}
-                href={link.url.startsWith("http") ? link.url : `https://${link.url}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.06 }}
-                className="flex items-center justify-between px-5 py-3.5 bg-black/40 backdrop-blur-sm border border-white/10 hover:border-white/25 hover:bg-black/60 transition-all group"
-              >
-                <div className="flex items-center gap-3">
-                  <Link2 className="w-3.5 h-3.5 text-primary/70" />
-                  <span style={{ fontFamily }} className="text-sm font-bold text-white uppercase tracking-wider">
-                    {link.label || link.url}
-                  </span>
-                </div>
-                <ExternalLink className="w-3.5 h-3.5 text-white/20 group-hover:text-white/50 transition-colors" />
-              </motion.a>
-            ))}
-          </div>
-        )}
-
-        {/* Footer tag */}
-        <p className="text-center text-[10px] text-white/15 font-orbitron uppercase tracking-widest mt-8">
-          VOID Esport · Profil Joueur
-        </p>
       </div>
 
       {/* ── Music player ── */}

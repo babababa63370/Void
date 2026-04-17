@@ -64,7 +64,7 @@ router.patch("/players/me", async (req, res) => {
     return;
   }
 
-  const { customAvatar, banner, background, font, music, links, brawlTag } = req.body as {
+  const { customAvatar, banner, background, font, music, links, brawlTag, backgroundVideo } = req.body as {
     customAvatar?: string | null;
     banner?: string | null;
     background?: string | null;
@@ -72,6 +72,7 @@ router.patch("/players/me", async (req, res) => {
     music?: string | null;
     links?: string | null;
     brawlTag?: string | null;
+    backgroundVideo?: string | null;
   };
 
   await db
@@ -84,6 +85,7 @@ router.patch("/players/me", async (req, res) => {
       music: music ?? null,
       links: links ?? null,
       brawlTag: brawlTag ?? null,
+      backgroundVideo: backgroundVideo ?? null,
     })
     .where(eq(playerLoginsTable.discordId, discordId));
 

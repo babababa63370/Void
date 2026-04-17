@@ -19,6 +19,7 @@ export const playerLoginsTable = pgTable("player_logins", {
   music: text("music"),
   links: text("links"),
   brawlTag: text("brawl_tag"),
+  backgroundVideo: text("background_video"),
   lastLoginAt: timestamp("last_login_at").defaultNow().notNull(),
 });
 
