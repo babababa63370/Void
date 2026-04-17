@@ -1,14 +1,19 @@
 import { Router, type IRouter } from "express";
 import { db, playerLoginsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
+import { SignJWT, jwtVerify } from "jose";
 
 const router: IRouter = Router();
+
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET is not set");
+  return new TextEncoder().encode(secret);
+}
 
 interface DiscordTokenResponse {
   access_token: string;
   token_type: string;
-  expires_in: number;
-  refresh_token: string;
   scope: string;
 }
 
@@ -20,6 +25,7 @@ interface DiscordUser {
   global_name: string | null;
 }
 
+// POST /api/auth/discord/exchange — exchange code for user info + signed JWT
 router.post("/auth/discord/exchange", async (req, res) => {
   const { code, redirectUri } = req.body as { code?: string; redirectUri?: string };
 
@@ -37,7 +43,6 @@ router.post("/auth/discord/exchange", async (req, res) => {
   }
 
   try {
-    // Exchange code for access token
     const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -59,7 +64,6 @@ router.post("/auth/discord/exchange", async (req, res) => {
 
     const tokenData = (await tokenRes.json()) as DiscordTokenResponse;
 
-    // Fetch Discord user info
     const userRes = await fetch("https://discord.com/api/users/@me", {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     });
@@ -71,22 +75,15 @@ router.post("/auth/discord/exchange", async (req, res) => {
 
     const user = (await userRes.json()) as DiscordUser;
 
-    // Display name: use global_name (new Discord) or username#discriminator (legacy)
     const displayName =
       user.global_name ?? (user.discriminator !== "0" ? `${user.username}#${user.discriminator}` : user.username);
 
-    // Upsert into DB
+    // Upsert in DB
     const existing = await db.select().from(playerLoginsTable).where(eq(playerLoginsTable.discordId, user.id));
-
     if (existing.length > 0) {
       await db
         .update(playerLoginsTable)
-        .set({
-          username: displayName,
-          discriminator: user.discriminator,
-          avatar: user.avatar,
-          lastLoginAt: new Date(),
-        })
+        .set({ username: displayName, discriminator: user.discriminator, avatar: user.avatar, lastLoginAt: new Date() })
         .where(eq(playerLoginsTable.discordId, user.id));
     } else {
       await db.insert(playerLoginsTable).values({
@@ -97,11 +94,20 @@ router.post("/auth/discord/exchange", async (req, res) => {
       });
     }
 
+    // Sign a JWT — 30 days expiry
+    const token = await new SignJWT({ username: displayName, avatar: user.avatar, discriminator: user.discriminator })
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject(user.id)
+      .setIssuedAt()
+      .setExpirationTime("30d")
+      .sign(getJwtSecret());
+
     res.json({
       discordId: user.id,
       username: displayName,
       avatar: user.avatar,
       discriminator: user.discriminator,
+      token,
     });
   } catch (err) {
     console.error("Discord OAuth error:", err);
@@ -109,7 +115,7 @@ router.post("/auth/discord/exchange", async (req, res) => {
   }
 });
 
-// Return the Discord OAuth URL (so frontend doesn't hardcode client_id)
+// GET /api/auth/discord/url
 router.get("/auth/discord/url", (req, res) => {
   const clientId = process.env.DISCORD_CLIENT_ID;
   if (!clientId) {
@@ -127,6 +133,28 @@ router.get("/auth/discord/url", (req, res) => {
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", "identify");
   res.json({ url: url.toString() });
+});
+
+// GET /api/auth/verify — validates the JWT, returns the Discord ID
+router.get("/auth/verify", async (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) {
+    res.status(401).json({ error: "no_token" });
+    return;
+  }
+
+  const token = authHeader.slice(7);
+
+  try {
+    const { payload } = await jwtVerify(token, getJwtSecret());
+    res.json({
+      discordId: payload.sub,
+      username: payload.username,
+      avatar: payload.avatar,
+    });
+  } catch {
+    res.status(401).json({ error: "invalid_token" });
+  }
 });
 
 export default router;

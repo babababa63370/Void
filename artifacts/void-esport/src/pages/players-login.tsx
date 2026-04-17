@@ -11,6 +11,7 @@ interface DiscordUser {
   username: string;
   avatar: string | null;
   discriminator: string;
+  token: string;
 }
 
 function avatarUrl(user: DiscordUser): string {
