@@ -43,6 +43,10 @@ from = "/privacy"
 to = "/privacy.html"
 
 [[services.production.rewrites]]
+from = "/players-login"
+to = "/players-login.html"
+
+[[services.production.rewrites]]
 from = "/*"
 to = "/index.html"
 

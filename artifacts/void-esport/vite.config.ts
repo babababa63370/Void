@@ -32,6 +32,7 @@ const routeToHtml: Record<string, string> = {
   "/rules": "/rules.html",
   "/terms": "/terms.html",
   "/privacy": "/privacy.html",
+  "/players-login": "/players-login.html",
 };
 
 export default defineConfig({
@@ -85,6 +86,7 @@ export default defineConfig({
         rules: path.resolve(import.meta.dirname, "rules.html"),
         terms: path.resolve(import.meta.dirname, "terms.html"),
         privacy: path.resolve(import.meta.dirname, "privacy.html"),
+        playersLogin: path.resolve(import.meta.dirname, "players-login.html"),
       },
     },
   },
