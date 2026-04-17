@@ -16,25 +16,11 @@ interface Player {
   color?: string;
 }
 
-const alphaRoster: Player[] = [
-  { tag: "Méga", role: "IGL / Flex", country: "🇫🇷", countryName: "France", specialty: ["Brawl Ball", "Gem Grab"], color: "from-violet-500/20" },
-  { tag: "D4rkPulse", role: "Fragger", country: "🇪🇸", countryName: "Spain", specialty: ["Bounty", "Knockout"], color: "from-fuchsia-500/20" },
-  { tag: "NullByte", role: "Support", country: "🇩🇪", countryName: "Germany", specialty: ["Heist", "Gem Grab"], color: "from-cyan-500/20" },
-  { tag: "VoidZero", role: "Fragger", country: "🇧🇷", countryName: "Brazil", specialty: ["Hot Zone", "Knockout"], color: "from-violet-500/20" },
-  { tag: "Eclipsed", role: "Flex", country: "🇫🇷", countryName: "France", specialty: ["Brawl Ball", "Hot Zone"], color: "from-fuchsia-500/20" },
-];
+const alphaRoster: Player[] = [];
 
-const omegaRoster: Player[] = [
-  { tag: "Phantom_BS", role: "Flex", country: "🇧🇪", countryName: "Belgium", specialty: ["Bounty", "Siege"] },
-  { tag: "Rift_99", role: "Fragger", country: "🇨🇦", countryName: "Canada", specialty: ["Hot Zone"] },
-  { tag: "ShadowPlay", role: "Fragger", country: "🇮🇹", countryName: "Italy", specialty: ["Knockout"] },
-  { tag: "Nexus_K", role: "Support", country: "🇪🇸", countryName: "Spain", specialty: ["Gem Grab"] },
-];
+const omegaRoster: Player[] = [];
 
-const staffMembers: Player[] = [
-  { tag: "VoidCoach", role: "Head Coach", country: "🇫🇷", countryName: "France", specialty: ["Strategy", "Analysis"] },
-  { tag: "VoidMG", role: "Team Manager", country: "🇫🇷", countryName: "France", specialty: ["Operations", "Recruitment"] },
-];
+const staffMembers: Player[] = [];
 
 function PlayerCard({ player, index, t }: { player: Player; index: number; t: (k: string) => string }) {
   const initials = player.tag.slice(0, 2).toUpperCase();
@@ -170,7 +156,7 @@ export default function Roster() {
     activeTab === "omega" ? omegaRoster :
     staffMembers;
 
-  const showOpenSlot = activeTab === "omega";
+  const showOpenSlot = currentRoster.length === 0;
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
