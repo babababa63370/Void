@@ -26,12 +26,32 @@ if (!basePath) {
   );
 }
 
+const routeToHtml: Record<string, string> = {
+  "/roster": "/roster.html",
+  "/join": "/join.html",
+  "/rules": "/rules.html",
+  "/terms": "/terms.html",
+  "/privacy": "/privacy.html",
+};
+
 export default defineConfig({
   base: basePath,
   plugins: [
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
+    {
+      name: "per-page-html",
+      configureServer(server) {
+        server.middlewares.use((req, _res, next) => {
+          const url = (req.url || "/").split("?")[0];
+          const stripped = url.replace(/^\/(fr|es|de|pt)(\/|$)/, "/").replace(/\/$/, "") || "/";
+          const target = routeToHtml[stripped];
+          if (target) req.url = target;
+          next();
+        });
+      },
+    },
     ...(process.env.NODE_ENV !== "production" &&
     process.env.REPL_ID !== undefined
       ? [
@@ -57,6 +77,16 @@ export default defineConfig({
   build: {
     outDir: path.resolve(import.meta.dirname, "dist/public"),
     emptyOutDir: true,
+    rollupOptions: {
+      input: {
+        index: path.resolve(import.meta.dirname, "index.html"),
+        roster: path.resolve(import.meta.dirname, "roster.html"),
+        join: path.resolve(import.meta.dirname, "join.html"),
+        rules: path.resolve(import.meta.dirname, "rules.html"),
+        terms: path.resolve(import.meta.dirname, "terms.html"),
+        privacy: path.resolve(import.meta.dirname, "privacy.html"),
+      },
+    },
   },
   server: {
     port,

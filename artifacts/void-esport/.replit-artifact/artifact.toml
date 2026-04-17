@@ -23,6 +23,26 @@ publicDir = "artifacts/void-esport/dist/public"
 serve = "static"
 
 [[services.production.rewrites]]
+from = "/roster"
+to = "/roster.html"
+
+[[services.production.rewrites]]
+from = "/join"
+to = "/join.html"
+
+[[services.production.rewrites]]
+from = "/rules"
+to = "/rules.html"
+
+[[services.production.rewrites]]
+from = "/terms"
+to = "/terms.html"
+
+[[services.production.rewrites]]
+from = "/privacy"
+to = "/privacy.html"
+
+[[services.production.rewrites]]
 from = "/*"
 to = "/index.html"
 
