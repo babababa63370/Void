@@ -39,53 +39,23 @@ interface I18nContextType {
   lang: Lang;
   t: (key: keyof Translations) => string;
   switchLang: (lang: Lang) => void;
-  langPrefix: string;
-  path: (route: string) => string;
 }
 
 const I18nContext = createContext<I18nContextType | null>(null);
 
-function detectLangFromUrl(): Lang | null {
-  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-  const pathname = window.location.pathname;
-  const relative = pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
-  const first = relative.split("/").filter(Boolean)[0];
-  if (first && NON_EN_LANGS.includes(first as Lang)) return first as Lang;
-  return null;
-}
-
-function getCurrentRoute(currentLang: Lang): string {
-  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-  const pathname = window.location.pathname;
-  let rel = pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
-  if (currentLang !== "en" && rel.startsWith(`/${currentLang}`)) {
-    rel = rel.slice(`/${currentLang}`.length);
-  }
-  return rel || "/";
+function detectInitialLang(): Lang {
+  const stored = localStorage.getItem("void_lang") as Lang | null;
+  if (stored && SUPPORTED_LANGS.includes(stored)) return stored;
+  return "en";
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLang] = useState<Lang>(() => {
-    return detectLangFromUrl() ?? (localStorage.getItem("void_lang") as Lang | null) ?? "en";
-  });
+  const [lang, setLang] = useState<Lang>(detectInitialLang);
 
-  const langPrefix = lang !== "en" ? `/${lang}` : "";
-  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-
-  const path = useCallback(
-    (route: string) => `${base}${langPrefix}${route}`,
-    [base, langPrefix]
-  );
-
-  const switchLang = useCallback(
-    (newLang: Lang) => {
-      const route = getCurrentRoute(lang);
-      localStorage.setItem("void_lang", newLang);
-      const newBase = newLang !== "en" ? `${base}/${newLang}` : base;
-      window.location.href = `${newBase}${route}`;
-    },
-    [lang, base]
-  );
+  const switchLang = useCallback((newLang: Lang) => {
+    localStorage.setItem("void_lang", newLang);
+    setLang(newLang);
+  }, []);
 
   const t = useCallback(
     (key: keyof Translations): string => {
@@ -96,35 +66,31 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     [lang]
   );
 
-  // IP-based language detection on first visit
+  // IP-based language detection on first visit (no stored preference)
   useEffect(() => {
-    const urlLang = detectLangFromUrl();
     const storedLang = localStorage.getItem("void_lang");
-
-    // If already on a lang URL or already has a stored preference, skip IP detection
-    if (urlLang || storedLang) return;
+    if (storedLang) return;
 
     fetch("https://ipapi.co/json/", { signal: AbortSignal.timeout(4000) })
       .then((r) => r.json())
       .then((data: { country_code?: string }) => {
         const detected = data.country_code ? COUNTRY_LANG[data.country_code] : undefined;
-        if (detected && detected !== "en") {
+        if (detected) {
           localStorage.setItem("void_lang", detected);
-          window.location.href = `${base}/${detected}/`;
+          setLang(detected);
         }
       })
       .catch(() => {
-        // Fallback: check browser language
         const browserLang = navigator.language.split("-")[0] as Lang;
         if (SUPPORTED_LANGS.includes(browserLang) && browserLang !== "en") {
           localStorage.setItem("void_lang", browserLang);
-          window.location.href = `${base}/${browserLang}/`;
+          setLang(browserLang);
         }
       });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <I18nContext.Provider value={{ lang, t, switchLang, langPrefix, path }}>
+    <I18nContext.Provider value={{ lang, t, switchLang }}>
       {children}
     </I18nContext.Provider>
   );

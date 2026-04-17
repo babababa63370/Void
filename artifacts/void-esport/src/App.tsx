@@ -13,20 +13,11 @@ import RosterPlayer from "@/pages/roster-player";
 import PlayersLogin from "@/pages/players-login";
 import Meonix from "@/pages/meonix";
 import CookieBanner from "@/components/cookie-banner";
-import { I18nProvider, NON_EN_LANGS, type Lang } from "@/i18n/context";
+import { I18nProvider } from "@/i18n/context";
 
 const queryClient = new QueryClient();
 
-function getRouterBase(): string {
-  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
-  const pathname = window.location.pathname;
-  const relative = pathname.startsWith(base) ? pathname.slice(base.length) : pathname;
-  const firstSeg = relative.split("/").filter(Boolean)[0];
-  const isLangPrefix = firstSeg && NON_EN_LANGS.includes(firstSeg as Lang);
-  return isLangPrefix ? `${base}/${firstSeg}` : base;
-}
-
-const routerBase = getRouterBase();
+const routerBase = import.meta.env.BASE_URL.replace(/\/$/, "");
 
 function Router() {
   return (
