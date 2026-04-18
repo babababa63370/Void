@@ -5,6 +5,7 @@ const fr: Translations = {
   nav_roster: "Roster",
   nav_legacy: "Palmarès",
   nav_join: "Rejoindre",
+  nav_matcherino: "Matcherino",
   nav_enterVoid: "Entrer",
   nav_language: "Langue",
 

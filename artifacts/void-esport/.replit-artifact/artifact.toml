@@ -27,6 +27,10 @@ from = "/achievements"
 to = "/achievements.html"
 
 [[services.production.rewrites]]
+from = "/matcherino"
+to = "/matcherino.html"
+
+[[services.production.rewrites]]
 from = "/roster"
 to = "/roster.html"
 

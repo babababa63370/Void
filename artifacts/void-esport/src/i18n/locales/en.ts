@@ -4,6 +4,7 @@ const en = {
   nav_roster: "Roster",
   nav_legacy: "Legacy",
   nav_join: "Join",
+  nav_matcherino: "Matcherino",
   nav_enterVoid: "Enter Void",
   nav_language: "Language",
 

@@ -29,6 +29,7 @@ if (!basePath) {
 const routeToHtml: Record<string, string> = {
   "/about": "/about.html",
   "/achievements": "/achievements.html",
+  "/matcherino": "/matcherino.html",
   "/join": "/join.html",
   "/rules": "/rules.html",
   "/terms": "/terms.html",
@@ -91,6 +92,7 @@ export default defineConfig({
         index: path.resolve(import.meta.dirname, "index.html"),
         about: path.resolve(import.meta.dirname, "about.html"),
         achievements: path.resolve(import.meta.dirname, "achievements.html"),
+        matcherino: path.resolve(import.meta.dirname, "matcherino.html"),
         roster: path.resolve(import.meta.dirname, "roster.html"),
         join: path.resolve(import.meta.dirname, "join.html"),
         rules: path.resolve(import.meta.dirname, "rules.html"),

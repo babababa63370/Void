@@ -5,6 +5,7 @@ const de: Translations = {
   nav_roster: "Kader",
   nav_legacy: "Erfolge",
   nav_join: "Beitreten",
+  nav_matcherino: "Matcherino",
   nav_enterVoid: "Eintreten",
   nav_language: "Sprache",
 
