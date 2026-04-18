@@ -1,0 +1,49 @@
+services:
+
+  # ── Base de données PostgreSQL ───────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB:       void_esport
+      POSTGRES_USER:     void
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U void -d void_esport"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── API Server (Node.js / Express) ──────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: unless-stopped
+    environment:
+      DATABASE_URL:         postgresql://void:${POSTGRES_PASSWORD:-changeme}@db:5432/void_esport
+      DISCORD_CLIENT_ID:    ${DISCORD_CLIENT_ID}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+      JWT_SECRET:           ${JWT_SECRET}
+      NODE_ENV:             production
+      PORT:                 "8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # ── Frontend (Vite build → nginx) ───────────────────────────────────────────
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-80}:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

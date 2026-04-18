@@ -1,0 +1,12 @@
+node_modules
+**/node_modules
+.git
+.gitignore
+.env
+**/.env
+**/dist
+**/.replit-artifact
+.replit
+replit.md
+.local
+*.log
