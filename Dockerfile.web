@@ -31,8 +31,10 @@ FROM nginx:alpine AS runner
 # Copie les fichiers statiques buildés
 COPY --from=builder /app/artifacts/void-esport/dist/public /usr/share/nginx/html
 
-# Copie la config nginx
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+# Copie comme template — nginx le traitera avec envsubst au démarrage
+# NGINX_ENVSUBST_TEMPLATE_VARS=API_PORT limite l'envsubst à cette seule variable
+# (évite d'écraser les variables nginx internes : $host, $uri, $remote_addr…)
+COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 EXPOSE 80
 
