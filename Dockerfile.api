@@ -5,21 +5,20 @@ RUN npm install -g pnpm@10
 
 WORKDIR /app
 
-# Copie les fichiers de config workspace en premier (cache Docker)
+# Fichiers de config workspace (cache Docker optimisé)
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY patches/ ./patches/ 2>/dev/null || true
 
-# Copie les package.json de chaque workspace
-COPY lib/db/package.json ./lib/db/
-COPY lib/api-zod/package.json ./lib/api-zod/ 2>/dev/null || true
+# package.json de chaque workspace utilisé par api-server
+COPY lib/db/package.json            ./lib/db/
+COPY lib/api-zod/package.json       ./lib/api-zod/
 COPY artifacts/api-server/package.json ./artifacts/api-server/
 
-# Install des dépendances
 RUN pnpm install --frozen-lockfile
 
-# Copie les sources
-COPY lib/ ./lib/
-COPY artifacts/api-server/ ./artifacts/api-server/
+# Sources
+COPY lib/db/                        ./lib/db/
+COPY lib/api-zod/                   ./lib/api-zod/
+COPY artifacts/api-server/          ./artifacts/api-server/
 
 # Build (esbuild → dist/index.mjs autonome)
 RUN pnpm --filter @workspace/api-server run build
@@ -29,7 +28,6 @@ FROM node:24-alpine AS runner
 
 WORKDIR /app
 
-# Le bundle esbuild est autonome (dépendances incluses)
 COPY --from=builder /app/artifacts/api-server/dist ./dist
 
 ENV NODE_ENV=production

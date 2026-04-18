@@ -1,0 +1,62 @@
+baptiste-vaissiere@raspberrypi:~/Desktop/Void-main $ docker compose up -d --build
+[+] Building 3.3s (19/34)                                                                                                                                                  
+ => [internal] load local bake definitions                                                                                                                            0.0s
+ => => reading from stdin 977B                                                                                                                                        0.0s
+ => [api internal] load build definition from Dockerfile.api                                                                                                          0.2s
+ => => transferring dockerfile: 1.43kB                                                                                                                                0.0s
+ => [web internal] load build definition from Dockerfile.web                                                                                                          0.2s
+ => => transferring dockerfile: 1.70kB                                                                                                                                0.0s
+ => [web internal] load metadata for docker.io/library/node:24-alpine                                                                                                 1.9s
+ => [web internal] load metadata for docker.io/library/nginx:alpine                                                                                                   1.9s
+ => [api internal] load .dockerignore                                                                                                                                 0.1s
+ => => transferring context: 157B                                                                                                                                     0.0s
+ => CANCELED [api builder  1/12] FROM docker.io/library/node:24-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f                        0.9s
+ => => resolve docker.io/library/node:24-alpine@sha256:d1b3b4da11eefd5941e7f0b9cf17783fc99d9c6fc34884a665f40a06dbdfc94f                                               0.2s
+ => [api internal] load build context                                                                                                                                 0.5s
+ => => transferring context: 325.10kB                                                                                                                                 0.0s
+ => [web internal] load build context                                                                                                                                 0.4s
+ => => transferring context: 2.18MB                                                                                                                                   0.1s
+ => CANCELED [web runner 1/3] FROM docker.io/library/nginx:alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de                             0.5s
+ => => resolve docker.io/library/nginx:alpine@sha256:5616878291a2eed594aee8db4dade5878cf7edcb475e59193904b198d9b830de                                                 0.2s
+ => CACHED [api builder  2/12] RUN npm install -g pnpm@10                                                                                                             0.0s
+ => CACHED [api builder  3/12] WORKDIR /app                                                                                                                           0.0s
+ => CACHED [web builder  4/12] COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./                                                                                0.0s
+ => ERROR [web builder  5/12] COPY patches/ ./patches/ 2>/dev/null || true                                                                                            0.0s
+ => CACHED [web builder  6/12] COPY lib/db/package.json ./lib/db/                                                                                                     0.0s
+ => ERROR [web builder  7/12] COPY lib/api-zod/package.json ./lib/api-zod/ 2>/dev/null || true                                                                        0.0s
+ => CACHED [api builder  4/12] COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./                                                                                0.0s
+ => ERROR [api builder  5/12] COPY patches/ ./patches/ 2>/dev/null || true                                                                                            0.0s
+ => CACHED [api builder  6/12] COPY lib/db/package.json ./lib/db/                                                                                                     0.0s
+ => ERROR [api builder  7/12] COPY lib/api-zod/package.json ./lib/api-zod/ 2>/dev/null || true                                                                        0.0s
+------
+ > [web builder  5/12] COPY patches/ ./patches/ 2>/dev/null || true:
+------
+------
+ > [web builder  7/12] COPY lib/api-zod/package.json ./lib/api-zod/ 2>/dev/null || true:
+------
+------
+ > [api builder  5/12] COPY patches/ ./patches/ 2>/dev/null || true:
+------
+------
+ > [api builder  7/12] COPY lib/api-zod/package.json ./lib/api-zod/ 2>/dev/null || true:
+------
+[+] up 0/2
+ ⠙ Image void-main-api Building                                                                                                                                        3.4s
+ ⠙ Image void-main-web Building                                                                                                                                        3.4s
+Dockerfile.web:14
+
+--------------------
+
+  12 |     # Copie les package.json de chaque workspace
+
+  13 |     COPY lib/db/package.json ./lib/db/
+
+  14 | >>> COPY lib/api-zod/package.json ./lib/api-zod/ 2>/dev/null || true
+
+  15 |     COPY artifacts/void-esport/package.json ./artifacts/void-esport/
+
+  16 |     
+
+--------------------
+
+target web: failed to solve: failed to compute cache key: failed to calculate checksum of ref gw0awct4ao6q1e4v99xqy1x70::pt9hse96clydw0q0yg4s2s8e7: "/2>/dev/null": not found

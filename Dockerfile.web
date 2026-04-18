@@ -5,21 +5,20 @@ RUN npm install -g pnpm@10
 
 WORKDIR /app
 
-# Copie les fichiers de config workspace en premier (cache Docker)
+# Fichiers de config workspace (cache Docker optimisé)
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY patches/ ./patches/ 2>/dev/null || true
 
-# Copie les package.json de chaque workspace
-COPY lib/db/package.json ./lib/db/
-COPY lib/api-zod/package.json ./lib/api-zod/ 2>/dev/null || true
-COPY artifacts/void-esport/package.json ./artifacts/void-esport/
+# package.json de chaque workspace utilisé par void-esport
+COPY lib/api-client-react/package.json    ./lib/api-client-react/
+COPY lib/object-storage-web/package.json  ./lib/object-storage-web/
+COPY artifacts/void-esport/package.json   ./artifacts/void-esport/
 
-# Install des dépendances
 RUN pnpm install --frozen-lockfile
 
-# Copie les sources
-COPY lib/ ./lib/
-COPY artifacts/void-esport/ ./artifacts/void-esport/
+# Sources
+COPY lib/api-client-react/                ./lib/api-client-react/
+COPY lib/object-storage-web/              ./lib/object-storage-web/
+COPY artifacts/void-esport/               ./artifacts/void-esport/
 
 # Build Vite (sortie → artifacts/void-esport/dist/public/)
 ENV BASE_PATH=/ NODE_ENV=production
@@ -28,12 +27,9 @@ RUN pnpm --filter @workspace/void-esport run build
 # ─── Runner stage (nginx) ─────────────────────────────────────────────────────
 FROM nginx:alpine AS runner
 
-# Copie les fichiers statiques buildés
 COPY --from=builder /app/artifacts/void-esport/dist/public /usr/share/nginx/html
 
-# Copie comme template — nginx le traitera avec envsubst au démarrage
-# NGINX_ENVSUBST_TEMPLATE_VARS=API_PORT limite l'envsubst à cette seule variable
-# (évite d'écraser les variables nginx internes : $host, $uri, $remote_addr…)
+# Template nginx — envsubst remplace ${API_PORT} au démarrage du container
 COPY nginx.conf /etc/nginx/templates/default.conf.template
 
 EXPOSE 80
