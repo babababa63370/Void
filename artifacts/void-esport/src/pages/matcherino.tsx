@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { ExternalLink, Trophy, Zap, Target, Flame } from "lucide-react";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
+import { useI18n } from "@/i18n/context";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 const fadeUp = {
@@ -13,18 +14,22 @@ const fadeUp = {
   }),
 };
 
-const features = [
-  { icon: Trophy, title: "Tournaments", desc: "Join official VOID Esport tournaments hosted on Matcherino with real prizes." },
-  { icon: Target, title: "Brackets", desc: "Track live brackets, standings, and match results in real time." },
-  { icon: Zap, title: "Prize Pools", desc: "Community-funded prize pools — every contribution counts." },
-  { icon: Flame, title: "Compete", desc: "Prove yourself in official VOID scrims and community events." },
-];
+const featureIcons = [Trophy, Target, Zap, Flame];
 
 export default function Matcherino() {
+  const { t } = useI18n();
+
   usePageMeta({
     title: "Matcherino — VOID Esport",
-    description: "Join VOID Esport tournaments on Matcherino. Compete for prize pools and claim your place in the void.",
+    description: t("matcherino_heroDesc"),
   });
+
+  const features = [
+    { icon: featureIcons[0], titleKey: "matcherino_f1Title", descKey: "matcherino_f1Desc" },
+    { icon: featureIcons[1], titleKey: "matcherino_f2Title", descKey: "matcherino_f2Desc" },
+    { icon: featureIcons[2], titleKey: "matcherino_f3Title", descKey: "matcherino_f3Desc" },
+    { icon: featureIcons[3], titleKey: "matcherino_f4Title", descKey: "matcherino_f4Desc" },
+  ];
 
   return (
     <div className="min-h-[100dvh] bg-background text-foreground selection:bg-red-600 selection:text-white overflow-x-hidden">
@@ -32,10 +37,6 @@ export default function Matcherino() {
         @keyframes redPulse {
           0%, 100% { opacity: 0.15; transform: scale(1); }
           50% { opacity: 0.3; transform: scale(1.05); }
-        }
-        @keyframes scanline {
-          0% { transform: translateY(-100%); }
-          100% { transform: translateY(100vh); }
         }
         @keyframes redGlitch {
           0%, 90%, 100% { clip-path: none; transform: none; }
@@ -49,10 +50,8 @@ export default function Matcherino() {
 
       {/* HERO */}
       <section className="relative min-h-[85vh] flex items-center justify-center pt-20 overflow-hidden">
-        {/* Grid bg */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808010_1px,transparent_1px),linear-gradient(to_bottom,#80808010_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_70%_70%_at_50%_50%,#000_60%,transparent_100%)] pointer-events-none" />
 
-        {/* Red glow orbs */}
         <div
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[min(700px,100vw)] h-[min(700px,100vw)] rounded-full pointer-events-none"
           style={{
@@ -65,14 +64,12 @@ export default function Matcherino() {
           style={{ background: "radial-gradient(circle, rgba(239,68,68,0.1) 0%, transparent 70%)" }}
         />
 
-        {/* Scanline effect */}
         <div
           className="absolute inset-0 pointer-events-none overflow-hidden opacity-[0.03]"
           style={{ background: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(220,38,38,0.8) 2px, rgba(220,38,38,0.8) 3px)" }}
         />
 
         <div className="container mx-auto px-4 relative z-10 flex flex-col items-center text-center py-20">
-          {/* Badge */}
           <motion.div
             variants={fadeUp}
             initial="hidden"
@@ -82,10 +79,9 @@ export default function Matcherino() {
             style={{ borderColor: "rgba(220,38,38,0.4)", background: "rgba(220,38,38,0.1)", color: "#ef4444" }}
           >
             <Flame className="w-3 h-3" />
-            Official Tournament Platform
+            {t("matcherino_badge")}
           </motion.div>
 
-          {/* Title */}
           <motion.h1
             variants={fadeUp}
             initial="hidden"
@@ -112,7 +108,7 @@ export default function Matcherino() {
             custom={2}
             className="text-base md:text-xl text-muted-foreground max-w-2xl font-medium leading-relaxed mb-10"
           >
-            VOID Esport's official tournament platform. Compete, climb, and claim your prize.
+            {t("matcherino_heroDesc")}
           </motion.p>
 
           <motion.div
@@ -120,7 +116,6 @@ export default function Matcherino() {
             initial="hidden"
             animate="visible"
             custom={3}
-            className="flex flex-col sm:flex-row gap-4"
           >
             <a
               href="https://matcherino.com"
@@ -135,12 +130,11 @@ export default function Matcherino() {
               onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 0 20px rgba(220,38,38,0.4), inset 0 1px 0 rgba(255,255,255,0.1)")}
             >
               <ExternalLink className="w-5 h-5" />
-              Join on Matcherino
+              {t("matcherino_heroCta")}
             </a>
           </motion.div>
         </div>
 
-        {/* Bottom fade */}
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent pointer-events-none" />
       </section>
 
@@ -158,14 +152,11 @@ export default function Matcherino() {
             viewport={{ once: true }}
             className="text-center mb-14"
           >
-            <p
-              className="text-xs font-orbitron tracking-[0.3em] uppercase mb-4"
-              style={{ color: "#ef4444" }}
-            >
-              What Awaits
+            <p className="text-xs font-orbitron tracking-[0.3em] uppercase mb-4" style={{ color: "#ef4444" }}>
+              {t("matcherino_featuresLabel")}
             </p>
             <h2 className="text-3xl md:text-5xl font-black font-orbitron tracking-tight uppercase text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60">
-              Enter The Arena
+              {t("matcherino_featuresTitle")}
             </h2>
           </motion.div>
 
@@ -173,16 +164,15 @@ export default function Matcherino() {
             className="grid grid-cols-1 sm:grid-cols-2 gap-px max-w-4xl mx-auto"
             style={{ background: "rgba(220,38,38,0.08)" }}
           >
-            {features.map(({ icon: Icon, title, desc }, i) => (
+            {features.map(({ icon: Icon, titleKey, descKey }, i) => (
               <motion.div
-                key={title}
+                key={titleKey}
                 variants={fadeUp}
                 initial="hidden"
                 whileInView="visible"
                 viewport={{ once: true }}
                 custom={i * 0.08}
-                className="bg-background p-8 group transition-colors"
-                style={{ "--hover-bg": "rgba(220,38,38,0.05)" } as React.CSSProperties}
+                className="bg-background p-8 transition-colors"
                 onMouseEnter={e => (e.currentTarget.style.background = "rgba(220,38,38,0.05)")}
                 onMouseLeave={e => (e.currentTarget.style.background = "")}
               >
@@ -193,9 +183,9 @@ export default function Matcherino() {
                   <Icon className="w-5 h-5" style={{ color: "#ef4444" }} />
                 </div>
                 <h3 className="font-orbitron font-bold text-sm tracking-wider uppercase text-foreground mb-2">
-                  {title}
+                  {t(titleKey as any)}
                 </h3>
-                <p className="text-muted-foreground text-sm leading-relaxed">{desc}</p>
+                <p className="text-muted-foreground text-sm leading-relaxed">{t(descKey as any)}</p>
               </motion.div>
             ))}
           </div>
@@ -216,17 +206,14 @@ export default function Matcherino() {
             viewport={{ once: true }}
             className="text-center max-w-2xl mx-auto"
           >
-            <p
-              className="text-xs font-orbitron tracking-[0.3em] uppercase mb-4"
-              style={{ color: "#ef4444" }}
-            >
-              Ready To Compete?
+            <p className="text-xs font-orbitron tracking-[0.3em] uppercase mb-4" style={{ color: "#ef4444" }}>
+              {t("matcherino_ctaLabel")}
             </p>
             <h2 className="text-3xl md:text-5xl font-black font-orbitron tracking-tight uppercase mb-5 text-transparent bg-clip-text bg-gradient-to-b from-white to-white/70">
-              The Void Awaits
+              {t("matcherino_ctaTitle")}
             </h2>
             <p className="text-muted-foreground mb-10 text-base md:text-lg leading-relaxed">
-              Register on Matcherino and enter upcoming VOID Esport events. Show us what you're made of.
+              {t("matcherino_ctaDesc")}
             </p>
             <a
               href="https://matcherino.com"
@@ -238,7 +225,7 @@ export default function Matcherino() {
               onMouseLeave={e => (e.currentTarget.style.boxShadow = "0 0 25px rgba(220,38,38,0.35)")}
             >
               <ExternalLink className="w-5 h-5" />
-              Go to Matcherino
+              {t("matcherino_ctaBtn")}
             </a>
           </motion.div>
         </div>

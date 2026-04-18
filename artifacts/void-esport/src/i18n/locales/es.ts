@@ -286,6 +286,25 @@ const es: Translations = {
 
   // ACHIEVEMENTS
   achievements_empty: "Nada por ahora",
+
+  // MATCHERINO
+  matcherino_badge: "Plataforma oficial de torneos",
+  matcherino_heroDesc: "La plataforma oficial de torneos de VOID Esport. Compite, escala y reclama tu premio.",
+  matcherino_heroCta: "Unirse en Matcherino",
+  matcherino_featuresLabel: "Lo que te espera",
+  matcherino_featuresTitle: "Entra en la arena",
+  matcherino_f1Title: "Torneos",
+  matcherino_f1Desc: "Únete a los torneos oficiales de VOID Esport en Matcherino con premios reales.",
+  matcherino_f2Title: "Brackets",
+  matcherino_f2Desc: "Sigue brackets en vivo, clasificaciones y resultados en tiempo real.",
+  matcherino_f3Title: "Prize Pools",
+  matcherino_f3Desc: "Prize pools financiados por la comunidad — cada contribución cuenta.",
+  matcherino_f4Title: "Competir",
+  matcherino_f4Desc: "Demuéstrate en los scrims y eventos oficiales de VOID.",
+  matcherino_ctaLabel: "¿Listo para competir?",
+  matcherino_ctaTitle: "El Void te espera",
+  matcherino_ctaDesc: "Regístrate en Matcherino y participa en los próximos eventos de VOID Esport. Demuéstranos de qué estás hecho.",
+  matcherino_ctaBtn: "Ir a Matcherino",
 };
 
 export default es;
