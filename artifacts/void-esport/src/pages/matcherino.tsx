@@ -82,7 +82,7 @@ export default function Matcherino() {
             custom={3}
           >
             <a
-              href="https://matcherino.com"
+              href="https://matcherino.com/u/VOID%20e-sport/2423612/events"
               target="_blank"
               rel="noopener noreferrer"
               className="clip-path-button inline-flex items-center justify-center gap-3 bg-primary hover:bg-primary/90 text-primary-foreground font-orbitron font-bold uppercase tracking-wider px-8 py-4 text-base transition-all hover:box-glow"
@@ -160,7 +160,7 @@ export default function Matcherino() {
               {t("matcherino_ctaDesc")}
             </p>
             <a
-              href="https://matcherino.com"
+              href="https://matcherino.com/u/VOID%20e-sport/2423612/events"
               target="_blank"
               rel="noopener noreferrer"
               className="clip-path-button inline-flex items-center justify-center gap-3 bg-primary hover:bg-primary/90 text-primary-foreground font-orbitron font-bold uppercase tracking-wider px-8 py-4 text-base transition-all hover:box-glow"
