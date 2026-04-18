@@ -38,6 +38,10 @@ interface EventDetail {
   payouts: Array<{ place: number; amount: string }> | null;
 }
 
+function stripHtml(html: string) {
+  return html.replace(/<[^>]*>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim();
+}
+
 function formatDate(iso: string, locale: string) {
   return new Date(iso).toLocaleDateString(locale, { day: "numeric", month: "long", year: "numeric" });
 }
@@ -215,13 +219,13 @@ export default function MatcherinoEvent() {
             </motion.div>
 
             {/* DESCRIPTION */}
-            {event.description && (
+            {event.description && stripHtml(event.description) && (
               <motion.div variants={fadeUp} initial="hidden" animate="visible" custom={2}
                 className="border border-white/8 bg-white/[0.02] p-5 sm:p-6">
                 <h2 className="font-orbitron font-bold text-xs uppercase tracking-widest text-white/40 mb-3">
                   {t("matcherino_detail_description")}
                 </h2>
-                <p className="text-sm text-white/70 leading-relaxed whitespace-pre-line">{event.description}</p>
+                <p className="text-sm text-white/70 leading-relaxed whitespace-pre-line">{stripHtml(event.description)}</p>
               </motion.div>
             )}
 
