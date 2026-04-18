@@ -314,6 +314,9 @@ const pt: Translations = {
   matcherino_eventsPrize: "Premiação",
   matcherino_eventsParticipants: "Participantes",
   matcherino_eventsStart: "Início",
+  matcherino_eventsRefresh: "Atualizar",
+  matcherino_eventsRefreshing: "Atualizando...",
+  matcherino_eventsLastSync: "Última sync",
 };
 
 export default pt;

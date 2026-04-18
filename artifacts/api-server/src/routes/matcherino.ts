@@ -1,9 +1,10 @@
 import { Router } from "express";
+import { db, matcherinoEventsTable } from "@workspace/db";
 
 const router = Router();
 
 const MATCHERINO_USER_ID = 2423612;
-const MATCHERINO_API = "https://api.matcherino.com/__api/bounties/search";
+const MATCHERINO_SEARCH = "https://api.matcherino.com/__api/bounties/search";
 const MATCHERINO_DETAIL = "https://api.matcherino.com/__api/bounties";
 const MAX_PAGES = 5;
 const PAGE_SIZE = 50;
@@ -18,7 +19,6 @@ interface BountyDetail {
   endAt: string | null;
   totalBalance: number;
   participantsCount: number;
-  description: string;
   game: { id: number; title: string; image: string; slug: string };
   meta: { backgroundImg?: string };
 }
@@ -29,60 +29,91 @@ async function fetchFullDetail(id: number): Promise<BountyDetail | null> {
       headers: { Accept: "application/json" },
     });
     if (!res.ok) return null;
-    const data = (await res.json()) as BountyDetail;
-    return data;
+    return (await res.json()) as BountyDetail;
   } catch {
     return null;
   }
 }
 
+async function fetchAndSyncEvents(): Promise<void> {
+  const summaries: Array<{ id: number; creator: { id: number }; startAt: string; endAt: string | null; totalBalance: number; participantsCount: number; heroImg: string; game: { id: number; title: string; image: string; slug: string } }> = [];
+  let url: string | null = `${MATCHERINO_SEARCH}?pageSize=${PAGE_SIZE}`;
+
+  for (let page = 0; page < MAX_PAGES && url !== null; page++) {
+    const response = await fetch(url, { headers: { Accept: "application/json" } });
+    const data = (await response.json()) as {
+      status: number;
+      body: {
+        contents: typeof summaries;
+        moreAfter: boolean;
+        links: { next?: string };
+      };
+    };
+    if (data.status !== 200) break;
+    summaries.push(...data.body.contents.filter((item) => item.creator.id === MATCHERINO_USER_ID));
+    url = data.body.moreAfter && data.body.links.next ? data.body.links.next : null;
+  }
+
+  await Promise.all(
+    summaries.map(async (s) => {
+      const detail = await fetchFullDetail(s.id);
+      await db
+        .insert(matcherinoEventsTable)
+        .values({
+          id: s.id,
+          title: detail?.title ?? s.title ?? `Tournament ${s.id}`,
+          kind: "tournament",
+          startAt: s.startAt ? new Date(s.startAt) : null,
+          endAt: s.endAt ? new Date(s.endAt) : null,
+          totalBalance: s.totalBalance ?? 0,
+          participantsCount: s.participantsCount ?? 0,
+          heroImg: detail?.heroImg ?? s.heroImg ?? "",
+          backgroundImg: detail?.meta?.backgroundImg ?? "",
+          thumbnailImg: detail?.thumbnailImg ?? "",
+          gameId: s.game?.id ?? null,
+          gameTitle: s.game?.title ?? null,
+          gameImage: s.game?.image ?? null,
+          gameSlug: s.game?.slug ?? null,
+          fetchedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: matcherinoEventsTable.id,
+          set: {
+            title: detail?.title ?? s.title ?? `Tournament ${s.id}`,
+            startAt: s.startAt ? new Date(s.startAt) : null,
+            endAt: s.endAt ? new Date(s.endAt) : null,
+            totalBalance: s.totalBalance ?? 0,
+            participantsCount: s.participantsCount ?? 0,
+            heroImg: detail?.heroImg ?? s.heroImg ?? "",
+            backgroundImg: detail?.meta?.backgroundImg ?? "",
+            thumbnailImg: detail?.thumbnailImg ?? "",
+            gameId: s.game?.id ?? null,
+            gameTitle: s.game?.title ?? null,
+            gameImage: s.game?.image ?? null,
+            gameSlug: s.game?.slug ?? null,
+            fetchedAt: new Date(),
+          },
+        });
+    }),
+  );
+}
+
 router.get("/matcherino/events", async (_req, res) => {
   try {
-    const summaries: Array<{ id: number; creator: { id: number }; [key: string]: unknown }> = [];
-    let url: string | null = `${MATCHERINO_API}?pageSize=${PAGE_SIZE}`;
+    const events = await db.select().from(matcherinoEventsTable).orderBy(matcherinoEventsTable.startAt);
+    res.json({ events });
+  } catch {
+    res.status(500).json({ error: "Failed to load events from database" });
+  }
+});
 
-    for (let page = 0; page < MAX_PAGES && url !== null; page++) {
-      const response = await fetch(url, {
-        headers: { Accept: "application/json" },
-      });
-      const data = (await response.json()) as {
-        status: number;
-        body: {
-          contents: Array<{ id: number; creator: { id: number }; [key: string]: unknown }>;
-          moreAfter: boolean;
-          links: { next?: string };
-        };
-      };
-
-      if (data.status !== 200) break;
-
-      const filtered = data.body.contents.filter(
-        (item) => item.creator.id === MATCHERINO_USER_ID,
-      );
-      summaries.push(...filtered);
-
-      url = data.body.moreAfter && data.body.links.next
-        ? data.body.links.next
-        : null;
-    }
-
-    const events = await Promise.all(
-      summaries.map(async (s) => {
-        const detail = await fetchFullDetail(s.id);
-        if (!detail) return s;
-        return {
-          ...s,
-          heroImg: detail.heroImg || s.heroImg,
-          thumbnailImg: detail.thumbnailImg,
-          description: detail.description,
-          backgroundImg: detail.meta?.backgroundImg ?? "",
-        };
-      }),
-    );
-
+router.post("/matcherino/events/refresh", async (_req, res) => {
+  try {
+    await fetchAndSyncEvents();
+    const events = await db.select().from(matcherinoEventsTable).orderBy(matcherinoEventsTable.startAt);
     res.json({ events });
   } catch (err) {
-    res.status(500).json({ error: "Failed to fetch Matcherino events" });
+    res.status(500).json({ error: "Failed to refresh events" });
   }
 });
 

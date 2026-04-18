@@ -322,6 +322,9 @@ const en = {
   matcherino_eventsPrize: "Prize Pool",
   matcherino_eventsParticipants: "Participants",
   matcherino_eventsStart: "Starts",
+  matcherino_eventsRefresh: "Refresh",
+  matcherino_eventsRefreshing: "Refreshing...",
+  matcherino_eventsLastSync: "Last sync",
 };
 
 export type Translations = typeof en;

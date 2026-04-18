@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ExternalLink, Trophy, Zap, Target, Flame, Users, Calendar, DollarSign, Loader2, AlertCircle } from "lucide-react";
+import { ExternalLink, Trophy, Zap, Target, Flame, Users, Calendar, DollarSign, Loader2, AlertCircle, RefreshCw } from "lucide-react";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { useI18n } from "@/i18n/context";
@@ -21,18 +21,18 @@ interface MatcherinoEvent {
   id: number;
   title: string;
   kind: string;
-  startAt: string;
+  startAt: string | null;
   endAt: string | null;
   totalBalance: number;
   participantsCount: number;
   heroImg: string;
-  backgroundImg?: string;
-  thumbnailImg?: string;
-  game: {
-    id: number;
-    title: string;
-    image: string;
-  };
+  backgroundImg: string;
+  thumbnailImg: string;
+  gameId: number | null;
+  gameTitle: string | null;
+  gameImage: string | null;
+  gameSlug: string | null;
+  fetchedAt: string;
 }
 
 function formatDate(iso: string, locale: string) {
@@ -67,24 +67,43 @@ export default function Matcherino() {
 
   const [events, setEvents] = useState<MatcherinoEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
+  const [lastSync, setLastSync] = useState<string | null>(null);
 
-  useEffect(() => {
-    const baseUrl = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
-    fetch(`${baseUrl}/api/matcherino/events`)
+  const baseUrl = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+
+  const loadEvents = (fresh = false) => {
+    if (fresh) setRefreshing(true);
+    else setLoading(true);
+    setError(false);
+
+    const url = fresh
+      ? `${baseUrl}/api/matcherino/events/refresh`
+      : `${baseUrl}/api/matcherino/events`;
+
+    fetch(url, { method: fresh ? "POST" : "GET" })
       .then((r) => {
         if (!r.ok) throw new Error("fetch failed");
         return r.json();
       })
       .then((data: { events: MatcherinoEvent[] }) => {
         setEvents(data.events);
-        setLoading(false);
+        if (data.events.length > 0) {
+          const latest = data.events.reduce((a, b) =>
+            new Date(a.fetchedAt) > new Date(b.fetchedAt) ? a : b,
+          );
+          setLastSync(latest.fetchedAt);
+        }
       })
-      .catch(() => {
-        setError(true);
+      .catch(() => setError(true))
+      .finally(() => {
         setLoading(false);
+        setRefreshing(false);
       });
-  }, []);
+  };
+
+  useEffect(() => { loadEvents(); }, []);
 
   return (
     <div className="min-h-[100dvh] bg-background text-foreground selection:bg-primary selection:text-primary-foreground overflow-x-hidden">
@@ -168,6 +187,21 @@ export default function Matcherino() {
             <h2 className="text-2xl sm:text-3xl md:text-5xl font-black font-orbitron tracking-tight uppercase text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60">
               {t("matcherino_eventsTitle")}
             </h2>
+            <div className="flex items-center justify-center gap-3 mt-5">
+              {lastSync && (
+                <span className="text-[10px] text-muted-foreground font-orbitron tracking-wider">
+                  {t("matcherino_eventsLastSync")} · {formatDate(lastSync, lang)}
+                </span>
+              )}
+              <button
+                onClick={() => loadEvents(true)}
+                disabled={refreshing || loading}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary font-orbitron text-[10px] tracking-widest uppercase transition-colors disabled:opacity-50 disabled:cursor-not-allowed active:scale-95"
+              >
+                <RefreshCw className={`w-3 h-3 ${refreshing ? "animate-spin" : ""}`} />
+                {refreshing ? t("matcherino_eventsRefreshing") : t("matcherino_eventsRefresh")}
+              </button>
+            </div>
           </motion.div>
 
           {loading && (
@@ -207,18 +241,19 @@ export default function Matcherino() {
                   className="group bg-background border border-white/5 sm:border-0 p-0 hover:bg-primary/5 transition-colors flex flex-col overflow-hidden active:scale-[0.99]"
                 >
                   {/* Image */}
-                  {(event.backgroundImg || event.heroImg || event.game?.image) ? (
+                  {(event.backgroundImg || event.heroImg || event.gameImage) ? (
                     <div className="w-full h-40 sm:h-36 overflow-hidden relative">
                       <img
-                        src={event.backgroundImg || event.heroImg || `${event.game?.image ?? ""}-/resize/600x/`}
+                        src={event.backgroundImg || event.heroImg || `${event.gameImage ?? ""}-/resize/600x/`}
                         alt={event.title}
                         className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/20 to-transparent pointer-events-none" />
-                      {/* Game badge overlay */}
-                      <div className="absolute top-2 left-2 px-2 py-0.5 bg-background/70 backdrop-blur-sm border border-primary/20 text-primary font-orbitron text-[9px] tracking-widest uppercase">
-                        {event.game?.title ?? "Tournament"}
-                      </div>
+                      {event.gameTitle && (
+                        <div className="absolute top-2 left-2 px-2 py-0.5 bg-background/70 backdrop-blur-sm border border-primary/20 text-primary font-orbitron text-[9px] tracking-widest uppercase">
+                          {event.gameTitle}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="w-full h-40 sm:h-36 flex items-center justify-center bg-primary/5 border-b border-primary/10">
@@ -236,9 +271,15 @@ export default function Matcherino() {
                     <div className="flex flex-col gap-1.5 text-xs text-muted-foreground mt-auto">
                       <div className="flex items-center gap-2">
                         <Calendar className="w-3 h-3 text-primary/60 shrink-0" />
-                        <span>{formatDate(event.startAt, lang)}</span>
-                        <span className="text-primary/40">·</span>
-                        <span>{formatTime(event.startAt, lang)}</span>
+                        {event.startAt ? (
+                          <>
+                            <span>{formatDate(event.startAt, lang)}</span>
+                            <span className="text-primary/40">·</span>
+                            <span>{formatTime(event.startAt, lang)}</span>
+                          </>
+                        ) : (
+                          <span>—</span>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         <Users className="w-3 h-3 text-primary/60 shrink-0" />
