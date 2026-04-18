@@ -99,6 +99,11 @@ Express 5 server on port 8080, paths proxied at `/api`.
 - `GET /api/auth/discord/url?redirectUri=...` — returns Discord OAuth authorization URL
 - `POST /api/auth/discord/exchange` — exchanges OAuth code for Discord user info + signed JWT
 - `GET /api/auth/verify` — validates JWT (Bearer token), returns Discord ID and user info
+- `GET /api/brawl/player/:tag` — proxy vers l'API Brawl Stars pour récupérer les stats d'un joueur
+
+### Brawl Stars API
+- La route `/api/brawl/player/:tag` appelle actuellement `api.brawlapi.com/v1/players/:tag` sans token (affiche "Profil introuvable" car cette API requiert une auth)
+- **TODO** : remplacer par l'API perso du propriétaire — ajouter l'URL et le token/secret via un secret Replit (`BRAWL_API_URL` et/ou `BRAWL_API_KEY`) puis mettre à jour `artifacts/api-server/src/routes/brawl.ts`
 
 ### Auth Flow
 1. Frontend calls `/api/auth/discord/url` → gets OAuth URL with `client_id` from env
