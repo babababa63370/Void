@@ -15,7 +15,7 @@ RUN sed -i "/-linux-arm64-musl: '-'/d" pnpm-lock.yaml && \
 
 RUN pnpm install --no-frozen-lockfile --force
 
-ENV BASE_PATH=/ NODE_ENV=production
+ENV BASE_PATH=/ NODE_ENV=production PORT=80
 RUN pnpm --filter @workspace/void-esport run build
 
 # ─── Runner stage (nginx) ─────────────────────────────────────────────────────
