@@ -189,7 +189,7 @@ export default function Matcherino() {
               {events.map((event, i) => (
                 <motion.a
                   key={event.id}
-                  href={`https://matcherino.com/t/${event.id}`}
+                  href={`https://matcherino.com/tournaments/${event.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   variants={fadeUp}
