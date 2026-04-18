@@ -13,7 +13,7 @@ COPY lib/api-client-react/package.json    ./lib/api-client-react/
 COPY lib/object-storage-web/package.json  ./lib/object-storage-web/
 COPY artifacts/void-esport/package.json   ./artifacts/void-esport/
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Sources
 COPY lib/api-client-react/                ./lib/api-client-react/

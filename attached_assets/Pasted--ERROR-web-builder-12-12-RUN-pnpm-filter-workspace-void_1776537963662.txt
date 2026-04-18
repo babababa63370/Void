@@ -1,0 +1,69 @@
+ => ERROR [web builder 12/12] RUN pnpm --filter @workspace/void-esport run build                                                                                      1.7s
+ => [api builder 12/12] RUN pnpm --filter @workspace/api-server run build                                                                                             2.0s
+ => CANCELED [api runner 3/3] COPY --from=builder /app/artifacts/api-server/dist ./dist                                                                               0.0s
+------
+ > [web builder 12/12] RUN pnpm --filter @workspace/void-esport run build:
+1.103 
+1.103 > @workspace/void-esport@0.0.0 build /app/artifacts/void-esport
+1.103 > vite build --config vite.config.ts
+1.103 
+1.377 /app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js:115
+1.377           throw new Error(
+1.377                 ^
+1.377 
+1.377 Error: Cannot find module @rollup/rollup-linux-arm64-musl. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+1.377     at requireWithFriendlyError (/app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js:115:9)
+1.377     at Object.<anonymous> (/app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js:124:76)
+1.377     at Module._compile (node:internal/modules/cjs/loader:1830:14)
+1.377     at Object..js (node:internal/modules/cjs/loader:1961:10)
+1.377     at Module.load (node:internal/modules/cjs/loader:1553:32)
+1.377     at Module._load (node:internal/modules/cjs/loader:1355:12)
+1.377     at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+1.377     at loadCJSModuleWithModuleLoad (node:internal/modules/esm/translators:326:3)
+1.377     at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:231:7)
+1.377     at ModuleJob.run (node:internal/modules/esm/module_job:437:25) {
+1.377   [cause]: Error: Cannot find module '@rollup/rollup-linux-arm64-musl'
+1.377   Require stack:
+1.377   - /app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js
+1.377       at Module._resolveFilename (node:internal/modules/cjs/loader:1476:15)
+1.377       at wrapResolveFilename (node:internal/modules/cjs/loader:1049:27)
+1.377       at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1073:10)
+1.377       at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1094:12)
+1.377       at Module._load (node:internal/modules/cjs/loader:1262:25)
+1.377       at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+1.377       at Module.require (node:internal/modules/cjs/loader:1576:12)
+1.377       at require (node:internal/modules/helpers:153:16)
+1.377       at requireWithFriendlyError (/app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js:97:10)
+1.377       at Object.<anonymous> (/app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js:124:76) {
+1.377     code: 'MODULE_NOT_FOUND',
+1.377     requireStack: [
+1.377       '/app/node_modules/.pnpm/rollup@4.59.0/node_modules/rollup/dist/native.js'
+1.377     ]
+1.377   }
+1.377 }
+1.377 
+1.377 Node.js v24.15.0
+1.413 /app/artifacts/void-esport:
+1.413  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/void-esport@0.0.0 build: `vite build --config vite.config.ts`
+1.413 Exit status 1
+------
+[+] up 0/2
+ ⠙ Image void-main-api Building                                                                                                                                       83.9s
+ ⠙ Image void-main-web Building                                                                                                                                       83.9s
+Dockerfile.web:25
+
+--------------------
+
+  23 |     # Build Vite (sortie → artifacts/void-esport/dist/public/)
+
+  24 |     ENV BASE_PATH=/ NODE_ENV=production
+
+  25 | >>> RUN pnpm --filter @workspace/void-esport run build
+
+  26 |     
+
+  27 |     # ─── Runner stage (nginx) ─────────────────────────────────────────────────────
+
+--------------------
+
+target web: failed to solve: process "/bin/sh -c pnpm --filter @workspace/void-esport run build" did not complete successfully: exit code: 1

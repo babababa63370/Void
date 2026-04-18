@@ -13,7 +13,7 @@ COPY lib/db/package.json            ./lib/db/
 COPY lib/api-zod/package.json       ./lib/api-zod/
 COPY artifacts/api-server/package.json ./artifacts/api-server/
 
-RUN pnpm install --frozen-lockfile
+RUN pnpm install --no-frozen-lockfile
 
 # Sources
 COPY lib/db/                        ./lib/db/
