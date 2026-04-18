@@ -23,6 +23,10 @@ publicDir = "artifacts/void-esport/dist/public"
 serve = "static"
 
 [[services.production.rewrites]]
+from = "/achievements"
+to = "/achievements.html"
+
+[[services.production.rewrites]]
 from = "/roster"
 to = "/roster.html"
 

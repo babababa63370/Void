@@ -45,6 +45,7 @@ Competitive Brawl Stars esport clan site with cyberpunk/esports aesthetic.
 - `/rules` — Code of conduct with sanction levels
 - `/terms` — Terms of service
 - `/privacy` — Privacy policy
+- `/achievements` — Palmarès / Legacy (page vide pour l'instant : "Rien encore pour l'instant")
 - `/players-login` — Player Portal (Discord OAuth login, noindex, hidden from nav)
 - `/meonix` — Zone restreinte accessible uniquement à l'ID Discord `1243206708604702791` (sinon 404)
 - `/*` — Animated 404 page

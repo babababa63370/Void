@@ -282,6 +282,9 @@ const es: Translations = {
   player_musicPlaying: "Reproduciendo",
   player_musicPaused: "Reproducir",
   player_profileFooter: "VOID Esport · Perfil del Jugador",
+
+  // ACHIEVEMENTS
+  achievements_empty: "Nada por ahora",
 };
 
 export default es;

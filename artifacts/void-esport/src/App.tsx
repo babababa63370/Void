@@ -13,6 +13,7 @@ import RosterPlayer from "@/pages/roster-player";
 import PlayersLogin from "@/pages/players-login";
 import Meonix from "@/pages/meonix";
 import About from "@/pages/about";
+import Achievements from "@/pages/achievements";
 import CookieBanner from "@/components/cookie-banner";
 import { I18nProvider } from "@/i18n/context";
 
@@ -27,6 +28,7 @@ function Router() {
       <Route path="/roster" component={Roster} />
       <Route path="/roster/:username" component={RosterPlayer} />
       <Route path="/about" component={About} />
+      <Route path="/achievements" component={Achievements} />
       <Route path="/join" component={Join} />
       <Route path="/rules" component={Rules} />
       <Route path="/terms" component={Terms} />

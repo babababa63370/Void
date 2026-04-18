@@ -290,6 +290,9 @@ const en = {
   nf_achievements: "Achievements",
   nf_join: "Join",
   nf_copyright: "All rights reserved",
+
+  // ACHIEVEMENTS
+  achievements_empty: "Nothing yet for now",
 };
 
 export type Translations = typeof en;

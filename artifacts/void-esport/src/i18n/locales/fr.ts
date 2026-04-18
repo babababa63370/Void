@@ -282,6 +282,9 @@ const fr: Translations = {
   nf_achievements: "Palmarès",
   nf_join: "Rejoindre",
   nf_copyright: "Tous droits réservés",
+
+  // ACHIEVEMENTS
+  achievements_empty: "Rien encore pour l'instant",
 };
 
 export default fr;
