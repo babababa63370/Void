@@ -4,6 +4,7 @@ import { Menu, X, Globe, ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import logoPath from "@assets/purple_black_emblem_without_void_c4a1470f_1776350974040.png";
+import matcherinoIconPath from "@assets/matcherino-icon.png";
 import { useI18n, SUPPORTED_LANGS, LANG_NAMES, LANG_FLAGS, type Lang } from "@/i18n/context";
 
 export default function Navbar() {
@@ -16,7 +17,7 @@ export default function Navbar() {
     { href: "/about", label: t("nav_about") },
     { href: "/roster", label: t("nav_roster") },
     { href: "/achievements", label: t("nav_legacy") },
-    { href: "/matcherino", label: t("nav_matcherino"), red: true },
+    { href: "/matcherino", label: t("nav_matcherino"), icon: matcherinoIconPath },
     { href: "/join", label: t("nav_join") },
   ];
 
@@ -53,12 +54,11 @@ export default function Navbar() {
             <Link
               key={item.href}
               href={item.href}
-              className={`text-sm font-medium transition-colors tracking-wider uppercase ${
-                item.red
-                  ? "text-red-500 hover:text-red-400 drop-shadow-[0_0_8px_rgba(239,68,68,0.6)]"
-                  : "text-muted-foreground hover:text-primary"
-              }`}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary transition-colors tracking-wider uppercase"
             >
+              {item.icon && (
+                <img src={item.icon} alt="" className="w-4 h-4 object-contain" />
+              )}
               {item.label}
             </Link>
           ))}
@@ -146,13 +146,12 @@ export default function Navbar() {
                 >
                   <Link
                     href={item.href}
-                    className={`flex items-center w-full px-4 py-3.5 text-base font-medium transition-colors tracking-wider uppercase border-b border-white/5 ${
-                      item.red
-                        ? "text-red-500 hover:text-red-400 hover:bg-red-500/5"
-                        : "text-muted-foreground hover:text-primary hover:bg-white/5"
-                    }`}
+                    className="flex items-center gap-2 w-full px-4 py-3.5 text-base font-medium text-muted-foreground hover:text-primary hover:bg-white/5 transition-colors tracking-wider uppercase border-b border-white/5"
                     onClick={() => setIsOpen(false)}
                   >
+                    {item.icon && (
+                      <img src={item.icon} alt="" className="w-5 h-5 object-contain" />
+                    )}
                     {item.label}
                   </Link>
                 </motion.div>
