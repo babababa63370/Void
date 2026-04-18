@@ -305,6 +305,15 @@ const pt: Translations = {
   matcherino_ctaTitle: "O Void Aguarda",
   matcherino_ctaDesc: "Regista-te no Matcherino e participa nos próximos eventos da VOID Esport. Mostra-nos do que és capaz.",
   matcherino_ctaBtn: "Ir para o Matcherino",
+  matcherino_eventsLabel: "Eventos ao vivo",
+  matcherino_eventsTitle: "Torneios VOID",
+  matcherino_eventsEmpty: "Nenhum evento próximo no momento. Fique ligado.",
+  matcherino_eventsLoading: "Carregando eventos...",
+  matcherino_eventsError: "Falha ao carregar os eventos.",
+  matcherino_eventsJoin: "Participar",
+  matcherino_eventsPrize: "Premiação",
+  matcherino_eventsParticipants: "Participantes",
+  matcherino_eventsStart: "Início",
 };
 
 export default pt;

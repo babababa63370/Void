@@ -4,6 +4,7 @@ import discordAuthRouter from "./discord-auth";
 import adminRouter from "./admin";
 import playersRouter from "./players";
 import storageRouter from "./storage";
+import matcherinoRouter from "./matcherino";
 
 const router: IRouter = Router();
 
@@ -12,5 +13,6 @@ router.use(discordAuthRouter);
 router.use(adminRouter);
 router.use(playersRouter);
 router.use(storageRouter);
+router.use(matcherinoRouter);
 
 export default router;

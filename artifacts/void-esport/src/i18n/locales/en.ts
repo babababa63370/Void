@@ -313,6 +313,15 @@ const en = {
   matcherino_ctaTitle: "The Void Awaits",
   matcherino_ctaDesc: "Register on Matcherino and enter upcoming VOID Esport events. Show us what you're made of.",
   matcherino_ctaBtn: "Go to Matcherino",
+  matcherino_eventsLabel: "Live Events",
+  matcherino_eventsTitle: "VOID Tournaments",
+  matcherino_eventsEmpty: "No upcoming events at the moment. Stay tuned.",
+  matcherino_eventsLoading: "Loading events...",
+  matcherino_eventsError: "Failed to load events.",
+  matcherino_eventsJoin: "Join",
+  matcherino_eventsPrize: "Prize Pool",
+  matcherino_eventsParticipants: "Participants",
+  matcherino_eventsStart: "Starts",
 };
 
 export type Translations = typeof en;
