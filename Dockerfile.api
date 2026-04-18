@@ -8,10 +8,10 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY . .
 
-# Retire toutes les exclusions ARM64 (gnu + musl) générées sous x86_64 par Replit
-# afin que pnpm installe les bons binaires natifs sur arm64 (musl/Alpine ou gnu/Debian)
-RUN sed -i "/-linux-arm64-musl: '-'/d" pnpm-lock.yaml && \
-    sed -i "/-linux-arm64-gnu: '-'/d" pnpm-lock.yaml
+# Retire toutes les exclusions de binaires natifs générées sous x86_64 par Replit
+# (esbuild, rollup, lightningcss, tailwindcss/oxide…)
+# afin que pnpm installe automatiquement les bons binaires pour la plateforme cible
+RUN sed -i "/: '-'$/d" pnpm-lock.yaml
 
 RUN pnpm install --no-frozen-lockfile --force
 
