@@ -9,7 +9,7 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY . .
 
 RUN pnpm install --no-frozen-lockfile
-RUN pnpm install --no-frozen-lockfile --save-dev @rollup/rollup-linux-arm64-musl
+RUN pnpm add -Dw @rollup/rollup-linux-arm64-musl
 ENV BASE_PATH=/ NODE_ENV=production
 RUN pnpm --filter @workspace/void-esport run build
 
