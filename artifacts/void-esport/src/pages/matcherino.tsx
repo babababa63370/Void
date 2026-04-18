@@ -26,6 +26,8 @@ interface MatcherinoEvent {
   totalBalance: number;
   participantsCount: number;
   heroImg: string;
+  backgroundImg?: string;
+  thumbnailImg?: string;
   game: {
     id: number;
     title: string;
@@ -199,17 +201,17 @@ export default function Matcherino() {
                   custom={i * 0.08}
                   className="group bg-background p-6 hover:bg-primary/5 transition-colors flex flex-col gap-4"
                 >
-                  {(event.heroImg || event.game?.image) ? (
-                    <div className="w-full h-32 overflow-hidden relative border border-primary/10">
+                  {(event.backgroundImg || event.heroImg || event.game?.image) ? (
+                    <div className="w-full h-36 overflow-hidden relative border border-primary/10">
                       <img
-                        src={event.heroImg || `${event.game?.image ?? ""}-/resize/600x/`}
+                        src={event.backgroundImg || event.heroImg || `${event.game?.image ?? ""}-/resize/600x/`}
                         alt={event.title}
-                        className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity"
+                        className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity"
                       />
-                      <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent pointer-events-none" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-background/70 to-transparent pointer-events-none" />
                     </div>
                   ) : (
-                    <div className="w-full h-32 flex items-center justify-center border border-primary/10 bg-primary/5">
+                    <div className="w-full h-36 flex items-center justify-center border border-primary/10 bg-primary/5">
                       <Trophy className="w-10 h-10 text-primary/30" />
                     </div>
                   )}
