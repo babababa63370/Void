@@ -1,0 +1,47 @@
+ => ERROR [web builder 8/8] RUN pnpm --filter @workspace/void-esport run build                                                                                        2.3s
+ => [api runner 3/3] COPY --from=builder /app/artifacts/api-server/dist ./dist                                                                                        0.4s
+------
+ > [web builder 8/8] RUN pnpm --filter @workspace/void-esport run build:
+1.186 
+1.186 > @workspace/void-esport@0.0.0 build /app/artifacts/void-esport
+1.186 > vite build --config vite.config.ts
+1.186 
+1.856 failed to load config from /app/artifacts/void-esport/vite.config.ts
+1.856 error during build:
+1.856 Error: Cannot find module '../lightningcss.linux-arm64-musl.node'
+1.856 Require stack:
+1.856 - /app/node_modules/.pnpm/lightningcss@1.31.1/node_modules/lightningcss/node/index.js
+1.856     at Module._resolveFilename (node:internal/modules/cjs/loader:1476:15)
+1.856     at wrapResolveFilename (node:internal/modules/cjs/loader:1049:27)
+1.856     at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1073:10)
+1.856     at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1094:12)
+1.856     at Module._load (node:internal/modules/cjs/loader:1262:25)
+1.856     at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+1.856     at Module.require (node:internal/modules/cjs/loader:1576:12)
+1.856     at require (node:internal/modules/helpers:153:16)
+1.856     at Object.<anonymous> (/app/node_modules/.pnpm/lightningcss@1.31.1/node_modules/lightningcss/node/index.js:22:22)
+1.856     at Module._compile (node:internal/modules/cjs/loader:1830:14)
+1.916 /app/artifacts/void-esport:
+1.916  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/void-esport@0.0.0 build: `vite build --config vite.config.ts`
+1.916 Exit status 1
+------
+[+] up 0/2
+ ⠙ Image void-main-api Building                                                                                                                                       58.0s
+ ⠙ Image void-main-web Building                                                                                                                                       58.0s
+Dockerfile.web:14
+
+--------------------
+
+  12 |     RUN pnpm add -Dw @rollup/rollup-linux-arm64-musl
+
+  13 |     ENV BASE_PATH=/ NODE_ENV=production
+
+  14 | >>> RUN pnpm --filter @workspace/void-esport run build
+
+  15 |     
+
+  16 |     # ─── Runner stage (nginx) ─────────────────────────────────────────────────────
+
+--------------------
+
+target web: failed to solve: process "/bin/sh -c pnpm --filter @workspace/void-esport run build" did not complete successfully: exit code: 1
