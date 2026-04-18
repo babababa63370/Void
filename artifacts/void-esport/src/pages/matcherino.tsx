@@ -199,25 +199,18 @@ export default function Matcherino() {
                   custom={i * 0.08}
                   className="group bg-background p-6 hover:bg-primary/5 transition-colors flex flex-col gap-4"
                 >
-                  {event.heroImg ? (
-                    <div className="w-full h-32 overflow-hidden">
+                  {(event.heroImg || event.game?.image) ? (
+                    <div className="w-full h-32 overflow-hidden relative border border-primary/10">
                       <img
-                        src={event.heroImg}
+                        src={event.heroImg || `${event.game?.image ?? ""}-/resize/600x/`}
                         alt={event.title}
                         className="w-full h-full object-cover opacity-70 group-hover:opacity-90 transition-opacity"
                       />
+                      <div className="absolute inset-0 bg-gradient-to-t from-background/60 to-transparent pointer-events-none" />
                     </div>
                   ) : (
                     <div className="w-full h-32 flex items-center justify-center border border-primary/10 bg-primary/5">
-                      {event.game?.image ? (
-                        <img
-                          src={`${event.game.image}-/resize/80x80/`}
-                          alt={event.game.title}
-                          className="w-16 h-16 object-contain opacity-60"
-                        />
-                      ) : (
-                        <Trophy className="w-10 h-10 text-primary/30" />
-                      )}
+                      <Trophy className="w-10 h-10 text-primary/30" />
                     </div>
                   )}
 
