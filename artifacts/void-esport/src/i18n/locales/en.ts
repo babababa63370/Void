@@ -325,6 +325,9 @@ const en = {
   matcherino_eventsRefresh: "Refresh",
   matcherino_eventsRefreshing: "Refreshing...",
   matcherino_eventsLastSync: "Last sync",
+  matcherino_tabActive: "Upcoming",
+  matcherino_tabFinished: "Finished",
+  matcherino_eventsEmptyFinished: "No finished tournaments yet.",
 };
 
 export type Translations = typeof en;

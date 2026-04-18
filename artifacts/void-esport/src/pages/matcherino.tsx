@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { ExternalLink, Trophy, Zap, Target, Flame, Users, Calendar, DollarSign, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { ExternalLink, Trophy, Zap, Target, Flame, Users, Calendar, DollarSign, Loader2, AlertCircle, RefreshCw, CheckCircle2, Hourglass } from "lucide-react";
 import Navbar from "@/components/layout/navbar";
 import Footer from "@/components/layout/footer";
 import { useI18n } from "@/i18n/context";
@@ -70,6 +70,13 @@ export default function Matcherino() {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(false);
   const [lastSync, setLastSync] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"active" | "finished">("active");
+
+  const now = new Date();
+  const activeEvents = events.filter((e) => !e.endAt || new Date(e.endAt) > now);
+  const finishedEvents = events.filter((e) => e.endAt && new Date(e.endAt) <= now)
+    .sort((a, b) => new Date(b.endAt!).getTime() - new Date(a.endAt!).getTime());
+  const displayedEvents = activeTab === "active" ? activeEvents : finishedEvents;
 
   const baseUrl = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
 
@@ -179,7 +186,7 @@ export default function Matcherino() {
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true }}
-            className="text-center mb-10 sm:mb-14"
+            className="text-center mb-8 sm:mb-10"
           >
             <p className="text-[10px] sm:text-xs font-orbitron tracking-[0.3em] uppercase text-primary mb-3 sm:mb-4">
               {t("matcherino_eventsLabel")}
@@ -204,6 +211,42 @@ export default function Matcherino() {
             </div>
           </motion.div>
 
+          {/* TABS */}
+          {!loading && !error && (
+            <div className="flex justify-center mb-8">
+              <div className="flex border border-white/10 overflow-hidden">
+                <button
+                  onClick={() => setActiveTab("active")}
+                  className={`flex items-center gap-2 px-5 py-2.5 font-orbitron text-[11px] uppercase tracking-widest transition-all ${
+                    activeTab === "active"
+                      ? "bg-primary text-white"
+                      : "text-white/40 hover:text-white/70 hover:bg-white/5"
+                  }`}
+                >
+                  <Hourglass className="w-3 h-3" />
+                  {t("matcherino_tabActive")}
+                  <span className={`ml-1 px-1.5 py-0.5 text-[9px] font-bold rounded-sm ${activeTab === "active" ? "bg-white/20" : "bg-white/10"}`}>
+                    {activeEvents.length}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setActiveTab("finished")}
+                  className={`flex items-center gap-2 px-5 py-2.5 font-orbitron text-[11px] uppercase tracking-widest border-l border-white/10 transition-all ${
+                    activeTab === "finished"
+                      ? "bg-primary text-white"
+                      : "text-white/40 hover:text-white/70 hover:bg-white/5"
+                  }`}
+                >
+                  <CheckCircle2 className="w-3 h-3" />
+                  {t("matcherino_tabFinished")}
+                  <span className={`ml-1 px-1.5 py-0.5 text-[9px] font-bold rounded-sm ${activeTab === "finished" ? "bg-white/20" : "bg-white/10"}`}>
+                    {finishedEvents.length}
+                  </span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {loading && (
             <div className="flex items-center justify-center gap-3 text-muted-foreground py-12 sm:py-16">
               <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin text-primary" />
@@ -218,16 +261,26 @@ export default function Matcherino() {
             </div>
           )}
 
-          {!loading && !error && events.length === 0 && (
+          {!loading && !error && displayedEvents.length === 0 && (
             <div className="text-center text-muted-foreground py-12 sm:py-16">
               <Trophy className="w-8 h-8 sm:w-10 sm:h-10 text-primary/30 mx-auto mb-4" />
-              <p className="font-orbitron text-xs sm:text-sm tracking-wider">{t("matcherino_eventsEmpty")}</p>
+              <p className="font-orbitron text-xs sm:text-sm tracking-wider">
+                {activeTab === "active" ? t("matcherino_eventsEmpty") : t("matcherino_eventsEmptyFinished")}
+              </p>
             </div>
           )}
 
-          {!loading && !error && events.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-px sm:bg-white/5 max-w-5xl mx-auto">
-              {events.map((event, i) => (
+          <AnimatePresence mode="wait">
+          {!loading && !error && displayedEvents.length > 0 && (
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-px sm:bg-white/5 max-w-5xl mx-auto"
+            >
+              {displayedEvents.map((event, i) => (
                 <motion.a
                   key={event.id}
                   href={`https://matcherino.com/tournaments/${event.id}`}
@@ -238,7 +291,7 @@ export default function Matcherino() {
                   whileInView="visible"
                   viewport={{ once: true }}
                   custom={i * 0.08}
-                  className="group bg-background border border-white/5 sm:border-0 p-0 hover:bg-primary/5 transition-colors flex flex-col overflow-hidden active:scale-[0.99]"
+                  className={`group bg-background border border-white/5 sm:border-0 p-0 hover:bg-primary/5 transition-colors flex flex-col overflow-hidden active:scale-[0.99] ${activeTab === "finished" ? "opacity-80 hover:opacity-100" : ""}`}
                 >
                   {/* Image */}
                   {(event.backgroundImg || event.heroImg || event.gameImage) ? (
@@ -304,8 +357,9 @@ export default function Matcherino() {
                   </div>
                 </motion.a>
               ))}
-            </div>
+            </motion.div>
           )}
+          </AnimatePresence>
         </div>
       </section>
 

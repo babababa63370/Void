@@ -317,6 +317,9 @@ const es: Translations = {
   matcherino_eventsRefresh: "Actualizar",
   matcherino_eventsRefreshing: "Actualizando...",
   matcherino_eventsLastSync: "Última sync",
+  matcherino_tabActive: "Próximos",
+  matcherino_tabFinished: "Finalizados",
+  matcherino_eventsEmptyFinished: "Aún no hay torneos finalizados.",
 };
 
 export default es;
