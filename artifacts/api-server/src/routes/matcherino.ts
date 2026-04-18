@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { eq } from "drizzle-orm";
 import { db, matcherinoEventsTable } from "@workspace/db";
 
 const router = Router();
@@ -17,10 +18,35 @@ interface BountyDetail {
   thumbnailImg: string;
   startAt: string;
   endAt: string | null;
+  finalizedAt: string | null;
   totalBalance: number;
   participantsCount: number;
+  playerLimit: number;
+  entryFee: number;
+  description: string;
   game: { id: number; title: string; image: string; slug: string };
-  meta: { backgroundImg?: string };
+  meta: {
+    backgroundImg?: string;
+    eventSocials?: {
+      discord?: string;
+      twitch?: string;
+      twitter?: string;
+      youtube?: string;
+      instagram?: string;
+      facebook?: string;
+    };
+    zone?: string;
+  };
+  roles: Array<{
+    userId: number;
+    userName: string;
+    displayName: string;
+    role: string;
+    authProvider: string;
+    supercellBgcolor?: string;
+    supercellCharacter?: string;
+  }>;
+  payouts: Array<{ place: number; amount: string }> | null;
 }
 
 async function fetchFullDetail(id: number): Promise<BountyDetail | null> {
@@ -97,6 +123,50 @@ async function fetchAndSyncEvents(): Promise<void> {
     }),
   );
 }
+
+router.get("/matcherino/events/:id", async (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+
+  try {
+    const [dbEvent] = await db
+      .select()
+      .from(matcherinoEventsTable)
+      .where(eq(matcherinoEventsTable.id, id));
+
+    const live = await fetchFullDetail(id);
+    if (!live && !dbEvent) return res.status(404).json({ error: "Event not found" });
+
+    return res.json({
+      id: live?.id ?? dbEvent?.id,
+      title: live?.title ?? dbEvent?.title,
+      kind: live?.kind ?? dbEvent?.kind,
+      startAt: live?.startAt ?? dbEvent?.startAt,
+      endAt: live?.endAt ?? dbEvent?.endAt,
+      finalizedAt: live?.finalizedAt ?? null,
+      totalBalance: live?.totalBalance ?? dbEvent?.totalBalance,
+      participantsCount: live?.participantsCount ?? dbEvent?.participantsCount,
+      playerLimit: live?.playerLimit ?? 0,
+      entryFee: live?.entryFee ?? 0,
+      description: live?.description ?? "",
+      heroImg: live?.heroImg ?? dbEvent?.heroImg ?? "",
+      backgroundImg: live?.meta?.backgroundImg ?? dbEvent?.backgroundImg ?? "",
+      thumbnailImg: live?.thumbnailImg ?? dbEvent?.thumbnailImg ?? "",
+      game: live?.game ?? {
+        id: dbEvent?.gameId,
+        title: dbEvent?.gameTitle,
+        image: dbEvent?.gameImage,
+        slug: dbEvent?.gameSlug,
+      },
+      socials: live?.meta?.eventSocials ?? {},
+      zone: live?.meta?.zone ?? null,
+      roles: live?.roles ?? [],
+      payouts: live?.payouts ?? null,
+    });
+  } catch {
+    return res.status(500).json({ error: "Failed to load event" });
+  }
+});
 
 router.get("/matcherino/events", async (_req, res) => {
   try {

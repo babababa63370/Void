@@ -283,9 +283,7 @@ export default function Matcherino() {
               {displayedEvents.map((event, i) => (
                 <motion.a
                   key={event.id}
-                  href={`https://matcherino.com/tournaments/${event.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href={`${import.meta.env.BASE_URL?.replace(/\/$/, "") ?? ""}/matcherino/${event.id}`}
                   variants={fadeUp}
                   initial="hidden"
                   whileInView="visible"

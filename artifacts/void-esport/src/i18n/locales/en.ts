@@ -328,6 +328,20 @@ const en = {
   matcherino_tabActive: "Upcoming",
   matcherino_tabFinished: "Finished",
   matcherino_eventsEmptyFinished: "No finished tournaments yet.",
+  matcherino_detail_back: "Back to events",
+  matcherino_detail_viewOn: "View on Matcherino",
+  matcherino_detail_participants: "Participants",
+  matcherino_detail_prize: "Prize Pool",
+  matcherino_detail_free: "Free Entry",
+  matcherino_detail_limit: "Player limit",
+  matcherino_detail_unlimited: "Unlimited",
+  matcherino_detail_entry: "Entry Fee",
+  matcherino_detail_description: "About",
+  matcherino_detail_socials: "Follow",
+  matcherino_detail_organizers: "Organizers",
+  matcherino_detail_payouts: "Prize Distribution",
+  matcherino_detail_notFound: "Event not found.",
+  matcherino_detail_place: "Place",
 };
 
 export type Translations = typeof en;

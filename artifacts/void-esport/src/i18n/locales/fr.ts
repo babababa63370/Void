@@ -320,6 +320,20 @@ const fr: Translations = {
   matcherino_tabActive: "À venir",
   matcherino_tabFinished: "Terminés",
   matcherino_eventsEmptyFinished: "Aucun tournoi terminé pour l'instant.",
+  matcherino_detail_back: "Retour aux événements",
+  matcherino_detail_viewOn: "Voir sur Matcherino",
+  matcherino_detail_participants: "Participants",
+  matcherino_detail_prize: "Prize Pool",
+  matcherino_detail_free: "Gratuit",
+  matcherino_detail_limit: "Limite joueurs",
+  matcherino_detail_unlimited: "Illimité",
+  matcherino_detail_entry: "Frais d'entrée",
+  matcherino_detail_description: "À propos",
+  matcherino_detail_socials: "Suivre",
+  matcherino_detail_organizers: "Organisateurs",
+  matcherino_detail_payouts: "Répartition des prix",
+  matcherino_detail_notFound: "Événement introuvable.",
+  matcherino_detail_place: "Place",
 };
 
 export default fr;
