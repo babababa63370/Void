@@ -5,22 +5,10 @@ RUN npm install -g pnpm@10
 
 WORKDIR /app
 
-# Fichiers de config workspace (cache Docker optimisé)
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-
-# package.json de chaque workspace utilisé par api-server
-COPY lib/db/package.json            ./lib/db/
-COPY lib/api-zod/package.json       ./lib/api-zod/
-COPY artifacts/api-server/package.json ./artifacts/api-server/
+COPY . .
 
 RUN pnpm install --no-frozen-lockfile
-
-# Sources
-COPY lib/db/                        ./lib/db/
-COPY lib/api-zod/                   ./lib/api-zod/
-COPY artifacts/api-server/          ./artifacts/api-server/
-
-# Build (esbuild → dist/index.mjs autonome)
 RUN pnpm --filter @workspace/api-server run build
 
 # ─── Runner stage ─────────────────────────────────────────────────────────────
