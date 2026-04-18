@@ -1,0 +1,48 @@
+ => ERROR [web builder 8/8] RUN pnpm --filter @workspace/void-esport run build                                                                                        2.7s
+ => CACHED [api runner 2/3] WORKDIR /app                                                                                                                              0.0s
+ => CACHED [api runner 3/3] COPY --from=builder /app/artifacts/api-server/dist ./dist                                                                                 0.0s
+ => CANCELED [api] exporting to image                                                                                                                                 0.8s
+ => => exporting layers                                                                                                                                               0.8s
+------
+ > [web builder 8/8] RUN pnpm --filter @workspace/void-esport run build:
+1.270 
+1.270 > @workspace/void-esport@0.0.0 build /app/artifacts/void-esport
+1.270 > vite build --config vite.config.ts
+1.270 
+2.253 failed to load config from /app/artifacts/void-esport/vite.config.ts
+2.254 error during build:
+2.254 Error: Cannot find native binding. npm has a bug related to optional dependencies (https://github.com/npm/cli/issues/4828). Please try `npm i` again after removing both package-lock.json and node_modules directory.
+2.254     at Object.<anonymous> (/app/node_modules/.pnpm/@tailwindcss+oxide@4.2.1/node_modules/@tailwindcss/oxide/index.js:559:11)
+2.254     at Module._compile (node:internal/modules/cjs/loader:1830:14)
+2.254     at Object..js (node:internal/modules/cjs/loader:1961:10)
+2.254     at Module.load (node:internal/modules/cjs/loader:1553:32)
+2.254     at Module._load (node:internal/modules/cjs/loader:1355:12)
+2.254     at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)
+2.254     at loadCJSModuleWithModuleLoad (node:internal/modules/esm/translators:326:3)
+2.254     at ModuleWrap.<anonymous> (node:internal/modules/esm/translators:231:7)
+2.254     at ModuleJob.run (node:internal/modules/esm/module_job:437:25)
+2.254     at async node:internal/modules/esm/loader:639:26
+2.401 /app/artifacts/void-esport:
+2.401  ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/void-esport@0.0.0 build: `vite build --config vite.config.ts`
+2.401 Exit status 1
+------
+[+] up 0/2
+ ⠙ Image void-main-api Building                                                                                                                                       61.0s
+ ⠙ Image void-main-web Building                                                                                                                                       61.0s
+Dockerfile.web:14
+
+--------------------
+
+  12 |     RUN pnpm add -Dw @rollup/rollup-linux-arm64-musl lightningcss-linux-arm64-musl
+
+  13 |     ENV BASE_PATH=/ NODE_ENV=production
+
+  14 | >>> RUN pnpm --filter @workspace/void-esport run build
+
+  15 |     
+
+  16 |     # ─── Runner stage (nginx) ─────────────────────────────────────────────────────
+
+--------------------
+
+target web: failed to solve: process "/bin/sh -c pnpm --filter @workspace/void-esport run build" did not complete successfully: exit code: 1

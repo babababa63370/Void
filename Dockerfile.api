@@ -8,8 +8,14 @@ WORKDIR /app
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY . .
 
+# Retire les exclusions ARM64 musl ajoutées par Replit (x86_64) pour que
+# pnpm installe automatiquement les bons binaires natifs sur Raspberry Pi
+RUN sed -i "/lightningcss>lightningcss-linux-arm64-musl: '-'/d" pnpm-lock.yaml && \
+    sed -i "/'@tailwindcss\/oxide>@tailwindcss\/oxide-linux-arm64-musl': '-'/d" pnpm-lock.yaml && \
+    sed -i "/rollup>@rollup\/rollup-linux-arm64-musl: '-'/d" pnpm-lock.yaml
+
 RUN pnpm install --no-frozen-lockfile
-RUN pnpm add -Dw @rollup/rollup-linux-arm64-musl lightningcss-linux-arm64-musl
+
 RUN pnpm --filter @workspace/api-server run build
 
 # ─── Runner stage ─────────────────────────────────────────────────────────────
