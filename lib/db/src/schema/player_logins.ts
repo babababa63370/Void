@@ -1,9 +1,4 @@
 import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
-
-export const PLAYER_ROLES = ["alpha", "omega", "staff"] as const;
-export type PlayerRole = typeof PLAYER_ROLES[number];
 
 export const playerLoginsTable = pgTable("player_logins", {
   id: serial("id").primaryKey(),
@@ -11,19 +6,12 @@ export const playerLoginsTable = pgTable("player_logins", {
   username: text("username").notNull(),
   discriminator: text("discriminator").default(""),
   avatar: text("avatar"),
-  role: text("role"),
-  customAvatar: text("custom_avatar"),
-  banner: text("banner"),
-  background: text("background"),
-  font: text("font"),
-  music: text("music"),
-  links: text("links"),
-  brawlTag: text("brawl_tag"),
-  backgroundVideo: text("background_video"),
-  cardBackground: text("card_background"),
+  role: text("role").default("none"), // "none" | "alpha" | "omega" | "staff"
+  country: text("country").default(""),
+  brawlTag: text("brawl_tag").default(""),
+  bio: text("bio").default(""),
+  favoriteModes: text("favorite_modes").default(""),
   lastLoginAt: timestamp("last_login_at").defaultNow().notNull(),
 });
 
-export const insertPlayerLoginSchema = createInsertSchema(playerLoginsTable).omit({ id: true, lastLoginAt: true });
-export type InsertPlayerLogin = z.infer<typeof insertPlayerLoginSchema>;
 export type PlayerLogin = typeof playerLoginsTable.$inferSelect;
