@@ -5,15 +5,13 @@ RUN npm install -g pnpm@10
 
 WORKDIR /app
 
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY package.json pnpm-workspace.yaml ./
 COPY . .
 
-# Retire toutes les exclusions de binaires natifs générées sous x86_64 par Replit
-# (esbuild, rollup, lightningcss, tailwindcss/oxide…)
-# afin que pnpm installe automatiquement les bons binaires pour la plateforme cible
-RUN sed -i "/: '-'$/d" pnpm-lock.yaml
-
-RUN pnpm install --no-frozen-lockfile --force
+# Supprime le lockfile généré sous x86_64 : les binaires natifs optionnels
+# (rollup, esbuild, lightningcss…) n'y sont pas résolus pour arm64.
+# pnpm résout tout depuis zéro et installe les bons binaires pour la plateforme cible.
+RUN rm pnpm-lock.yaml && pnpm install
 
 ENV BASE_PATH=/ NODE_ENV=production PORT=80
 RUN pnpm --filter @workspace/void-esport run build
