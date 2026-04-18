@@ -8,16 +8,9 @@ router.get("/brawl/player/:tag", async (req, res) => {
   const encoded = encodeURIComponent(tag);
 
   try {
-    const headers: Record<string, string> = {
-      Accept: "application/json",
-    };
-
-    const apiKey = process.env.BRAWLAPI_TOKEN ?? process.env.BRAWL_API_KEY;
-    if (apiKey) headers["Authorization"] = `Bearer ${apiKey}`;
-
     const response = await fetch(
       `https://api.brawlapi.com/v1/players/${encoded}`,
-      { headers },
+      { headers: { Accept: "application/json" } },
     );
 
     if (!response.ok) {
