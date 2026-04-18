@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Crown, Crosshair, UserCheck, ArrowLeft, Pencil, X,
   Music, Music2, Link2, Plus, Trash2, Loader2, Save, ExternalLink,
-  Image, Video, Palette,
+  Image, Video, Palette, Trophy, Star, Shield, ChevronDown, ChevronUp,
 } from "lucide-react";
 import { SiDiscord } from "react-icons/si";
 import { useI18n } from "@/i18n/context";
@@ -504,6 +504,189 @@ function EditPanel({
   );
 }
 
+// ─── BrawlProfile ─────────────────────────────────────────────────────────────
+
+interface BrawlBrawler {
+  id: number;
+  name: string;
+  power: number;
+  rank: number;
+  trophies: number;
+  highestTrophies: number;
+  gears: { name: string; level: number }[];
+  starPowers: { id: number; name: string }[];
+  gadgets: { id: number; name: string }[];
+}
+
+interface BrawlPlayer {
+  tag: string;
+  name: string;
+  nameColor: string;
+  icon: { id: number };
+  trophies: number;
+  highestTrophies: number;
+  expLevel: number;
+  expPoints: number;
+  isQualifiedFromChampionshipChallenge: boolean;
+  victories3v3: number;
+  soloVictories: number;
+  duoVictories: number;
+  bestRoboRumbleTime: number;
+  bestTimeAsBigBrawler: number;
+  club: { tag: string; name: string } | null;
+  brawlers: BrawlBrawler[];
+}
+
+function BrawlProfile({ tag }: { tag: string }) {
+  const [data, setData] = useState<BrawlPlayer | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const baseUrl = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
+
+  useEffect(() => {
+    const clean = tag.replace(/^#/, "");
+    fetch(`${baseUrl}/api/brawl/player/${encodeURIComponent(clean)}`)
+      .then(async (r) => {
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({ error: r.statusText })) as { error: string };
+          throw new Error(err.error ?? r.statusText);
+        }
+        return r.json() as Promise<BrawlPlayer>;
+      })
+      .then(setData)
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [tag, baseUrl]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-10">
+        <Loader2 className="w-5 h-5 text-primary animate-spin" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="text-center py-8 text-white/40 text-xs font-orbitron uppercase tracking-widest">
+        Profil introuvable
+      </div>
+    );
+  }
+
+  const maxTrophies = Math.max(...data.brawlers.map((b) => b.highestTrophies), 1);
+  const top5 = [...data.brawlers]
+    .sort((a, b) => b.highestTrophies - a.highestTrophies)
+    .slice(0, 5);
+
+  const nameColor = data.nameColor?.replace("0xff", "#") ?? "#ffffff";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 8 }}
+      className="mt-4 w-full rounded-none border border-white/10 bg-black/50 backdrop-blur-md overflow-hidden"
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/8 bg-black/30">
+        <div className="flex items-center gap-2">
+          <img
+            src={`https://cdn.brawlify.com/profile-icons/regular/${data.icon.id}.png`}
+            alt="icon"
+            className="w-9 h-9 rounded-full border border-white/10 object-contain bg-white/5"
+            onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+          />
+          <div>
+            <p className="font-orbitron font-bold text-sm leading-tight" style={{ color: nameColor }}>
+              {data.name}
+            </p>
+            <p className="text-[10px] text-white/30 font-mono">{data.tag}</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <p className="text-[10px] text-white/30 font-orbitron uppercase tracking-widest">Niveau</p>
+          <p className="font-orbitron font-bold text-primary text-base">{data.expLevel}</p>
+        </div>
+      </div>
+
+      {/* Stats */}
+      <div className="grid grid-cols-3 divide-x divide-white/8 border-b border-white/8">
+        <div className="flex flex-col items-center py-3 gap-0.5">
+          <Trophy className="w-3.5 h-3.5 text-yellow-400 mb-0.5" />
+          <p className="font-orbitron font-bold text-white text-sm">{data.trophies.toLocaleString()}</p>
+          <p className="text-[9px] text-white/30 uppercase tracking-wider">Trophées</p>
+        </div>
+        <div className="flex flex-col items-center py-3 gap-0.5">
+          <Star className="w-3.5 h-3.5 text-orange-400 mb-0.5" />
+          <p className="font-orbitron font-bold text-white text-sm">{data.highestTrophies.toLocaleString()}</p>
+          <p className="text-[9px] text-white/30 uppercase tracking-wider">Record</p>
+        </div>
+        <div className="flex flex-col items-center py-3 gap-0.5">
+          <Shield className="w-3.5 h-3.5 text-primary mb-0.5" />
+          <p className="font-orbitron font-bold text-white text-sm">{data.brawlers.length}</p>
+          <p className="text-[9px] text-white/30 uppercase tracking-wider">Brawlers</p>
+        </div>
+      </div>
+
+      {/* Victories */}
+      <div className="grid grid-cols-3 divide-x divide-white/8 border-b border-white/8 bg-white/[0.02]">
+        <div className="flex flex-col items-center py-2.5">
+          <p className="font-orbitron font-bold text-white text-xs">{data.victories3v3.toLocaleString()}</p>
+          <p className="text-[9px] text-white/30 uppercase tracking-wider">3v3</p>
+        </div>
+        <div className="flex flex-col items-center py-2.5">
+          <p className="font-orbitron font-bold text-white text-xs">{data.soloVictories.toLocaleString()}</p>
+          <p className="text-[9px] text-white/30 uppercase tracking-wider">Solo</p>
+        </div>
+        <div className="flex flex-col items-center py-2.5">
+          <p className="font-orbitron font-bold text-white text-xs">{data.duoVictories.toLocaleString()}</p>
+          <p className="text-[9px] text-white/30 uppercase tracking-wider">Duo</p>
+        </div>
+      </div>
+
+      {/* Club */}
+      {data.club && (
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/8 text-xs text-white/50 font-orbitron">
+          <span className="text-primary">🏆</span>
+          <span className="truncate">{data.club.name}</span>
+          <span className="text-white/20 font-mono text-[10px]">{data.club.tag}</span>
+        </div>
+      )}
+
+      {/* Top Brawlers */}
+      <div className="px-4 py-3">
+        <p className="text-[9px] text-white/30 font-orbitron uppercase tracking-widest mb-2.5">Top Brawlers</p>
+        <div className="space-y-2">
+          {top5.map((b) => (
+            <div key={b.id} className="flex items-center gap-3">
+              <img
+                src={`https://cdn.brawlify.com/brawlers/borderless/${b.id}.png`}
+                alt={b.name}
+                className="w-8 h-8 object-contain"
+                onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[10px] font-orbitron uppercase tracking-wide text-white/70 truncate">{b.name}</span>
+                  <span className="text-[10px] font-orbitron text-yellow-400 ml-2 shrink-0">{b.highestTrophies.toLocaleString()}</span>
+                </div>
+                <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-primary to-yellow-400 rounded-full"
+                    style={{ width: `${(b.highestTrophies / maxTrophies) * 100}%` }}
+                  />
+                </div>
+              </div>
+              <span className="text-[9px] font-orbitron text-white/25 shrink-0">Pwr {b.power}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function RosterPlayer() {
@@ -516,6 +699,7 @@ export default function RosterPlayer() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [showBrawl, setShowBrawl] = useState(false);
 
   usePageMeta({
     title: player ? `${player.username} — VOID Esport` : "Joueur",
@@ -674,9 +858,21 @@ export default function RosterPlayer() {
             </h1>
 
             {player.brawlTag && (
-              <div className="flex items-center gap-1.5 text-sm font-mono text-white/60 mb-3">
-                <span className="text-primary font-bold">#</span>
-                {player.brawlTag.replace(/^#/, "")}
+              <div className="flex flex-col items-center gap-2 mb-3">
+                <div className="flex items-center gap-1.5 text-sm font-mono text-white/60">
+                  <span className="text-primary font-bold">#</span>
+                  {player.brawlTag.replace(/^#/, "")}
+                </div>
+                <button
+                  onClick={() => setShowBrawl((v) => !v)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-primary/30 bg-primary/10 hover:bg-primary/20 text-primary font-orbitron text-[10px] tracking-widest uppercase transition-colors active:scale-95"
+                >
+                  {showBrawl ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                  {showBrawl ? "Masquer profil" : "Afficher profil"}
+                </button>
+                <AnimatePresence>
+                  {showBrawl && <BrawlProfile tag={player.brawlTag} />}
+                </AnimatePresence>
               </div>
             )}
 
