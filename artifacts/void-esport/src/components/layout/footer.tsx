@@ -1,5 +1,5 @@
 import logoPath from "@assets/purple_black_emblem_without_void_c4a1470f_1776350974040.png";
-import { SiDiscord, SiX, SiYoutube, SiTwitch } from "react-icons/si";
+import { SiDiscord, SiYoutube, SiTwitch } from "react-icons/si";
 import { Link } from "wouter";
 import { useI18n } from "@/i18n/context";
 
@@ -38,12 +38,9 @@ export default function Footer() {
                 <SiDiscord className="w-4 h-4" />
               </a>
               <a href="#" className="w-10 h-10 rounded-none clip-path-button bg-card flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-white/5 transition-all">
-                <SiX className="w-4 h-4" />
-              </a>
-              <a href="#" className="w-10 h-10 rounded-none clip-path-button bg-card flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-white/5 transition-all">
                 <SiYoutube className="w-4 h-4" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-none clip-path-button bg-card flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-white/5 transition-all">
+              <a href="https://www.twitch.tv/bsvoidesport" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-none clip-path-button bg-card flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-white/5 transition-all">
                 <SiTwitch className="w-4 h-4" />
               </a>
             </div>
