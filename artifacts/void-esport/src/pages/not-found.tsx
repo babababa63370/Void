@@ -1,15 +1,15 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { SiDiscord, SiTwitch, SiYoutube, SiInstagram } from "react-icons/si";
+import { SiDiscord, SiTwitch, SiYoutube, SiTiktok } from "react-icons/si";
 import { Home, Trophy, Users, Sword, ArrowLeft } from "lucide-react";
 import logoPath from "@assets/purple_black_emblem_without_void_c4a1470f_1776350974040.png";
 import { useI18n } from "@/i18n/context";
 
 const socialLinks = [
   { href: "https://discord.gg/gr9GTEJWWU", label: "Discord", icon: <SiDiscord className="w-5 h-5" /> },
-  { href: "https://twitch.tv/void_esport", label: "Twitch", icon: <SiTwitch className="w-5 h-5" /> },
-  { href: "https://youtube.com/@void_esport", label: "YouTube", icon: <SiYoutube className="w-5 h-5" /> },
-  { href: "https://instagram.com/void_esport", label: "Instagram", icon: <SiInstagram className="w-5 h-5" /> },
+  { href: "#", label: "YouTube", icon: <SiYoutube className="w-5 h-5" /> },
+  { href: "https://www.tiktok.com/@bsvoid_official", label: "TikTok", icon: <SiTiktok className="w-5 h-5" /> },
+  { href: "https://www.twitch.tv/bsvoidesport", label: "Twitch", icon: <SiTwitch className="w-5 h-5" /> },
 ];
 
 export default function NotFound() {
