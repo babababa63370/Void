@@ -43,11 +43,10 @@ function wrapTitle(text: string): [string, string | null] {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("fr-FR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  const d = new Date(iso);
+  const date = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+  const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  return `${date} à ${time}`;
 }
 
 async function fetchImageAsBase64(url: string): Promise<{ b64: string; mime: string } | null> {
@@ -182,11 +181,11 @@ export async function generateMatcherinoCard(event: CardEvent): Promise<Buffer> 
   <rect x="0" y="${H - 56}" width="${W}" height="56" fill="#0d0d12"/>
   <rect x="0" y="${H - 56}" width="${W}" height="1" fill="#8b5cf630"/>
 
-  <!-- Bottom left: matcherino.com link -->
-  <text x="80" y="${H - 22}" font-family="monospace" font-size="12" fill="#8b5cf680" letter-spacing="2">matcherino.com/tournaments/${event.id}</text>
+  <!-- Bottom left: direct event link -->
+  <text x="80" y="${H - 22}" font-family="monospace" font-size="12" fill="#8b5cf6aa" letter-spacing="2">void.meonix.me/matcherino/${event.id}</text>
 
-  <!-- Bottom right: void-esport branding -->
-  <text x="${W - 80}" y="${H - 22}" font-family="monospace" font-size="11" fill="#ffffff20" letter-spacing="3" text-anchor="end">VOID-ESPORT.COM</text>
+  <!-- Bottom right: site branding -->
+  <text x="${W - 80}" y="${H - 22}" font-family="monospace" font-size="13" font-weight="bold" fill="#ffffffcc" letter-spacing="3" text-anchor="end">void.meonix.me</text>
 
   <!-- Test banner (on top of everything) -->
   ${testBanner}
