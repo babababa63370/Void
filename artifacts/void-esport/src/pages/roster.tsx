@@ -13,7 +13,7 @@ interface Player {
   username: string;
   avatar: string | null;
   discriminator: string;
-  role: string | null;
+  roles: string[];
   cardBackground: string | null;
 }
 
@@ -162,7 +162,7 @@ export default function Roster() {
     { id: "staff" as const, label: t("roster_tabStaff"), icon: <UserCheck className="w-4 h-4" />, sublabel: t("roster_staffLabel") },
   ];
 
-  const currentRoster = players.filter((p) => p.role === activeTab);
+  const currentRoster = players.filter((p) => (p.roles ?? []).includes(activeTab));
   const showOpenSlot = !loading && currentRoster.length === 0;
 
   return (

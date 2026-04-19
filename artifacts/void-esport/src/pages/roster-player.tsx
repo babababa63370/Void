@@ -18,7 +18,7 @@ interface ProfileData {
   username: string;
   avatar: string | null;
   discriminator: string;
-  role: string | null;
+  roles: string[];
   customAvatar: string | null;
   banner: string | null;
   background: string | null;
@@ -760,7 +760,10 @@ export default function RosterPlayer() {
   }
   if (notFound || !player) return <NotFound />;
 
-  const role = ROLE_CONFIG[player.role as keyof typeof ROLE_CONFIG];
+  const activeRoles = (player.roles ?? [])
+    .map((r) => ROLE_CONFIG[r as keyof typeof ROLE_CONFIG])
+    .filter(Boolean);
+  const primaryRole = activeRoles[0] ?? null;
   const links = parseLinks(player.links);
   const fontFamily = player.font || "Orbitron";
   const hasVideo = !!player.backgroundVideo;
@@ -836,7 +839,7 @@ export default function RosterPlayer() {
           style={
             player.banner
               ? { backgroundImage: `url("${player.banner}")`, backgroundSize: "cover", backgroundPosition: "center" }
-              : { background: role ? `linear-gradient(135deg, ${role.glow}33, transparent)` : "rgba(124,58,237,0.1)" }
+              : { background: primaryRole ? `linear-gradient(135deg, ${primaryRole.glow}33, transparent)` : "rgba(124,58,237,0.1)" }
           }
         >
           <div className="w-full h-full bg-gradient-to-b from-transparent to-black/40" />
@@ -849,7 +852,7 @@ export default function RosterPlayer() {
         <div className="max-w-lg mx-auto px-4 pb-24">
           <div className="flex flex-col items-center -mt-16">
             <div className="relative">
-              <div className="absolute inset-0 rounded-full blur-2xl scale-110 opacity-60" style={{ background: role?.glow ?? "rgba(124,58,237,0.4)" }} />
+              <div className="absolute inset-0 rounded-full blur-2xl scale-110 opacity-60" style={{ background: primaryRole?.glow ?? "rgba(124,58,237,0.4)" }} />
               <img
                 src={getAvatar(player)}
                 alt={player.username}
@@ -886,12 +889,12 @@ export default function RosterPlayer() {
             )}
 
             <div className="flex items-center gap-2 flex-wrap justify-center">
-              {role && (
-                <span className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs font-orbitron uppercase tracking-widest ${role.color} ${role.border} ${role.bg}`}>
-                  <role.Icon className="w-3 h-3" />
-                  Division {role.label}
+              {activeRoles.map((r) => (
+                <span key={r.label} className={`flex items-center gap-1.5 px-3 py-1.5 border text-xs font-orbitron uppercase tracking-widest ${r.color} ${r.border} ${r.bg}`}>
+                  <r.Icon className="w-3 h-3" />
+                  Division {r.label}
                 </span>
-              )}
+              ))}
               <span className="flex items-center gap-1.5 px-3 py-1.5 border border-[#5865F2]/30 bg-[#5865F2]/10 text-[#5865F2] text-xs font-orbitron uppercase tracking-widest">
                 <SiDiscord className="w-3 h-3" />
                 VOID Esport

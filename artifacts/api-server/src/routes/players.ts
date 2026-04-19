@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db, playerLoginsTable } from "@workspace/db";
-import { isNotNull, eq, ilike } from "drizzle-orm";
+import { eq, ilike, sql } from "drizzle-orm";
 import { jwtVerify } from "jose";
 
 const router: IRouter = Router();
@@ -11,7 +11,7 @@ function getJwtSecret(): Uint8Array {
   return new TextEncoder().encode(secret);
 }
 
-// GET /api/players — public, returns all players with a role (summary)
+// GET /api/players — public, returns all players with at least one role
 router.get("/players", async (_req, res) => {
   const players = await db
     .select({
@@ -19,11 +19,11 @@ router.get("/players", async (_req, res) => {
       username: playerLoginsTable.username,
       avatar: playerLoginsTable.avatar,
       discriminator: playerLoginsTable.discriminator,
-      role: playerLoginsTable.role,
+      roles: playerLoginsTable.roles,
       cardBackground: playerLoginsTable.cardBackground,
     })
     .from(playerLoginsTable)
-    .where(isNotNull(playerLoginsTable.role));
+    .where(sql`cardinality(${playerLoginsTable.roles}) > 0`);
 
   res.json({ players });
 });
@@ -39,7 +39,7 @@ router.get("/players/profile/:username", async (req, res) => {
 
   const player = rows.find((p) => p.username.toLowerCase() === username.toLowerCase());
 
-  if (!player || !player.role) {
+  if (!player || !player.roles || player.roles.length === 0) {
     res.status(404).json({ error: "player_not_found" });
     return;
   }
