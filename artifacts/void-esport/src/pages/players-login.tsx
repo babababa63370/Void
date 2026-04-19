@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { SiDiscord } from "react-icons/si";
-import { LogOut, AlertCircle, Loader2, ShieldCheck } from "lucide-react";
+import { LogOut, AlertCircle, Loader2, ShieldCheck, ArrowLeft } from "lucide-react";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 const STORAGE_KEY = "void_player_session";
@@ -100,6 +100,12 @@ export default function PlayersLogin() {
       {/* Background */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-primary/10 rounded-full blur-[140px] pointer-events-none" />
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
+
+      {/* Back */}
+      <a href="/" className="absolute top-6 left-6 z-20 inline-flex items-center gap-2 text-xs font-orbitron uppercase tracking-widest text-white/40 hover:text-primary transition-colors">
+        <ArrowLeft className="w-3.5 h-3.5" />
+        Back to home
+      </a>
 
       <motion.div
         initial={{ opacity: 0, y: 24 }}

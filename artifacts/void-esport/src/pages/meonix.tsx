@@ -13,6 +13,7 @@ import {
   X,
   RefreshCw,
   ChevronRight,
+  ArrowLeft,
 } from "lucide-react";
 
 const ALLOWED_ID = "1243206708604702791";
@@ -343,6 +344,14 @@ export default function Meonix() {
       <div className="fixed inset-0 bg-[linear-gradient(to_right,#80808006_1px,transparent_1px),linear-gradient(to_bottom,#80808006_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
 
       <div className="relative z-10 flex flex-col min-h-[100dvh]">
+
+        {/* ── Back ── */}
+        <div className="px-4 pt-6">
+          <a href="/" className="inline-flex items-center gap-2 text-xs font-orbitron uppercase tracking-widest text-white/40 hover:text-primary transition-colors">
+            <ArrowLeft className="w-3.5 h-3.5" />
+            Back to home
+          </a>
+        </div>
 
         {/* ── Header ── */}
         <div className="px-4 pt-12 pb-6">
