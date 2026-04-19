@@ -1,6 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
 import { startBot } from "./lib/bot";
+import { initAutoAnnounce } from "./lib/autoAnnounce";
 
 const rawPort = process.env["PORT"];
 
@@ -26,3 +27,4 @@ app.listen(port, (err) => {
 });
 
 startBot().catch((err) => logger.error({ err }, "Bot startup failed"));
+initAutoAnnounce().catch((err) => logger.error({ err }, "AutoAnnounce init failed"));

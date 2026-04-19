@@ -1,5 +1,5 @@
-import { db, matcherinoEventsTable } from "@workspace/db";
-import { eq, and } from "drizzle-orm";
+import { db, matcherinoEventsTable, settingsTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
 import { sendMatcherinoAnnouncement } from "./bot";
 
 const PING_ID = "1495421946832359504";
@@ -102,6 +102,35 @@ async function syncAndAnnounce(): Promise<void> {
     }
   } catch (err) {
     console.error("[AutoAnnounce] Error during sync:", err);
+  }
+}
+
+export async function persistSettings(channelId: string, enabled: boolean): Promise<void> {
+  for (const [key, value] of Object.entries({ "matcherino.channelId": channelId, "matcherino.autoAnnounce": enabled ? "true" : "false" })) {
+    await db.insert(settingsTable).values({ key, value, updatedAt: new Date() })
+      .onConflictDoUpdate({ target: settingsTable.key, set: { value, updatedAt: new Date() } });
+  }
+}
+
+export async function loadSettings(): Promise<{ channelId: string; autoEnabled: boolean }> {
+  const rows = await db.select().from(settingsTable);
+  const map: Record<string, string> = {};
+  for (const r of rows) map[r.key] = r.value;
+  return {
+    channelId: map["matcherino.channelId"] ?? "",
+    autoEnabled: map["matcherino.autoAnnounce"] === "true",
+  };
+}
+
+export async function initAutoAnnounce(): Promise<void> {
+  try {
+    const saved = await loadSettings();
+    if (saved.autoEnabled && saved.channelId) {
+      console.log(`[AutoAnnounce] Reprise depuis DB — canal ${saved.channelId}`);
+      startAutoAnnounce(saved.channelId);
+    }
+  } catch (err) {
+    console.error("[AutoAnnounce] Erreur init:", err);
   }
 }
 

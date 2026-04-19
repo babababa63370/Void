@@ -609,6 +609,11 @@ function MatcherinoPage({ token }: { token: string }) {
   const [autoState, setAutoState] = useState<AutoState | null>(null);
   const [autoChannelId, setAutoChannelId] = useState("");
   const [autoToggling, setAutoToggling] = useState(false);
+  const [savingAutoChannel, setSavingAutoChannel] = useState(false);
+  const [savedAutoChannel, setSavedAutoChannel] = useState(false);
+
+  const [savingManualChannel, setSavingManualChannel] = useState(false);
+  const [savedManualChannel, setSavedManualChannel] = useState(false);
 
   const [previewId, setPreviewId] = useState<number | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -630,15 +635,39 @@ function MatcherinoPage({ token }: { token: string }) {
   const loadAutoState = useCallback(() => {
     fetch(`${baseUrl}/api/staff/matcherino/auto-announce/status`, { headers: authHeader })
       .then((r) => r.json())
-      .then((d: AutoState) => { setAutoState(d); setAutoChannelId(d.channelId || ""); })
+      .then((d: AutoState) => { setAutoState(d); if (d.channelId) setAutoChannelId(d.channelId); })
       .catch(() => {});
   }, [baseUrl, token]);
 
-  useEffect(() => { loadEvents(); loadAutoState(); }, [loadEvents, loadAutoState]);
+  useEffect(() => {
+    loadEvents();
+    loadAutoState();
+    fetch(`${baseUrl}/api/staff/matcherino/settings`, { headers: authHeader })
+      .then((r) => r.json())
+      .then((d: { channelId?: string; manualChannelId?: string }) => {
+        if (d.channelId) setAutoChannelId(d.channelId);
+        if (d.manualChannelId) setChannelId(d.manualChannelId);
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     const id = setInterval(loadAutoState, 15000);
     return () => clearInterval(id);
   }, [loadAutoState]);
+
+  async function saveChannel(key: string, value: string, setDone: (v: boolean) => void, setSaving: (v: boolean) => void) {
+    if (!value.trim()) return;
+    setSaving(true);
+    try {
+      await fetch(`${baseUrl}/api/staff/matcherino/settings`, {
+        method: "POST", headers: authHeader,
+        body: JSON.stringify({ key, value: value.trim() }),
+      });
+      setDone(true);
+      setTimeout(() => setDone(false), 2500);
+    } finally { setSaving(false); }
+  }
 
   async function announce(eventId: number, isTest: boolean) {
     if (!channelId.trim()) return;
@@ -743,16 +772,26 @@ function MatcherinoPage({ token }: { token: string }) {
           </button>
         </div>
 
-        <div className="flex items-center gap-2 border border-white/10 bg-white/[0.03] px-3 py-2.5">
-          <Hash className="w-4 h-4 text-primary/40 shrink-0" />
-          <input
-            type="text"
-            value={autoChannelId}
-            onChange={(e) => setAutoChannelId(e.target.value)}
-            disabled={autoState?.enabled}
-            placeholder="ID canal Discord pour les annonces automatiques"
-            className="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder:text-muted-foreground/30 font-mono disabled:opacity-50"
-          />
+        <div className="flex items-center gap-2">
+          <div className="flex-1 flex items-center gap-2 border border-white/10 bg-white/[0.03] px-3 py-2.5">
+            <Hash className="w-4 h-4 text-primary/40 shrink-0" />
+            <input
+              type="text"
+              value={autoChannelId}
+              onChange={(e) => { setAutoChannelId(e.target.value); setSavedAutoChannel(false); }}
+              disabled={autoState?.enabled}
+              placeholder="ID canal Discord pour les annonces automatiques"
+              className="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder:text-muted-foreground/30 font-mono disabled:opacity-50"
+            />
+          </div>
+          <button
+            onClick={() => saveChannel("matcherino.channelId", autoChannelId, setSavedAutoChannel, setSavingAutoChannel)}
+            disabled={savingAutoChannel || !autoChannelId.trim() || autoState?.enabled}
+            className="flex items-center gap-1.5 px-3 py-2.5 border border-primary/30 bg-primary/5 hover:bg-primary/10 text-primary text-[11px] font-orbitron uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+          >
+            {savingAutoChannel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : savedAutoChannel ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> : <Save className="w-3.5 h-3.5" />}
+            {savedAutoChannel ? "Sauvegardé" : "Enregistrer"}
+          </button>
         </div>
 
         {autoState?.enabled && (
@@ -778,15 +817,25 @@ function MatcherinoPage({ token }: { token: string }) {
       {/* ── Manual channel ── */}
       <div className="p-4 border border-white/8 bg-white/[0.01] space-y-3">
         <p className="text-[11px] font-orbitron text-muted-foreground/50 uppercase tracking-widest">Canal manuel (annonce / test)</p>
-        <div className="flex items-center gap-2 border border-white/10 bg-white/[0.03] px-3 py-2.5">
-          <Hash className="w-4 h-4 text-muted-foreground/30 shrink-0" />
-          <input
-            type="text"
-            value={channelId}
-            onChange={(e) => setChannelId(e.target.value)}
-            placeholder="ID canal Discord"
-            className="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder:text-muted-foreground/30 font-mono"
-          />
+        <div className="flex items-center gap-2">
+          <div className="flex-1 flex items-center gap-2 border border-white/10 bg-white/[0.03] px-3 py-2.5">
+            <Hash className="w-4 h-4 text-muted-foreground/30 shrink-0" />
+            <input
+              type="text"
+              value={channelId}
+              onChange={(e) => { setChannelId(e.target.value); setSavedManualChannel(false); }}
+              placeholder="ID canal Discord"
+              className="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder:text-muted-foreground/30 font-mono"
+            />
+          </div>
+          <button
+            onClick={() => saveChannel("matcherino.manualChannelId", channelId, setSavedManualChannel, setSavingManualChannel)}
+            disabled={savingManualChannel || !channelId.trim()}
+            className="flex items-center gap-1.5 px-3 py-2.5 border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-muted-foreground hover:text-white text-[11px] font-orbitron uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+          >
+            {savingManualChannel ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : savedManualChannel ? <CheckCircle2 className="w-3.5 h-3.5 text-green-400" /> : <Save className="w-3.5 h-3.5" />}
+            {savedManualChannel ? "Sauvegardé" : "Enregistrer"}
+          </button>
         </div>
       </div>
 

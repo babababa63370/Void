@@ -6,7 +6,7 @@ import { sql } from "drizzle-orm";
 import { db as dbPlayers, playerLoginsTable } from "@workspace/db";
 import { sendMatcherinoAnnouncement } from "../lib/bot";
 import { generateMatcherinoCard } from "../lib/matcherinoCard";
-import { startAutoAnnounce, stopAutoAnnounce, getAutoAnnounceState } from "../lib/autoAnnounce";
+import { startAutoAnnounce, stopAutoAnnounce, getAutoAnnounceState, persistSettings, loadSettings } from "../lib/autoAnnounce";
 
 function getJwtSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -249,6 +249,7 @@ router.post("/staff/matcherino/auto-announce/start", async (req, res) => {
   const { channelId } = req.body as { channelId: string };
   if (!channelId) return res.status(400).json({ error: "channelId required" });
   startAutoAnnounce(channelId);
+  await persistSettings(channelId, true);
   res.json({ success: true, state: getAutoAnnounceState() });
 });
 
@@ -256,7 +257,34 @@ router.post("/staff/matcherino/auto-announce/stop", async (req, res) => {
   const requesterId = await requireStaff(req, res);
   if (!requesterId) return;
   stopAutoAnnounce();
+  const cur = getAutoAnnounceState();
+  await persistSettings(cur.channelId, false);
   res.json({ success: true, state: getAutoAnnounceState() });
+});
+
+router.get("/staff/matcherino/settings", async (req, res) => {
+  const requesterId = await requireStaff(req, res);
+  if (!requesterId) return;
+  const { db: dbSett, settingsTable } = await import("@workspace/db");
+  const rows = await dbSett.select().from(settingsTable);
+  const map: Record<string, string> = {};
+  for (const r of rows) map[r.key] = r.value;
+  res.json({
+    channelId: map["matcherino.channelId"] ?? "",
+    autoEnabled: map["matcherino.autoAnnounce"] === "true",
+    manualChannelId: map["matcherino.manualChannelId"] ?? "",
+  });
+});
+
+router.post("/staff/matcherino/settings", async (req, res) => {
+  const requesterId = await requireStaff(req, res);
+  if (!requesterId) return;
+  const { key, value } = req.body as { key: string; value: string };
+  if (!key) return res.status(400).json({ error: "key required" });
+  const { db: dbSett, settingsTable } = await import("@workspace/db");
+  await dbSett.insert(settingsTable).values({ key, value, updatedAt: new Date() })
+    .onConflictDoUpdate({ target: settingsTable.key, set: { value, updatedAt: new Date() } });
+  res.json({ success: true });
 });
 
 router.post("/staff/matcherino/announce", async (req, res) => {
