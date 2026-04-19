@@ -26,10 +26,20 @@ const ROLE_CONFIG = {
   staff: { label: "Staff", icon: UserCheck, color: "text-cyan-400", bg: "bg-cyan-500/10 border-cyan-500/30" },
 } as const;
 
-const NAV_ITEMS = [
-  { path: "/staff", label: "Overview", icon: LayoutDashboard },
-  { path: "/staff/liste-staff", label: "Liste staff", icon: Users },
-  { path: "/staff/bot", label: "Bot Panel", icon: Bot },
+const NAV_GROUPS = [
+  {
+    category: "Staff Panel",
+    items: [
+      { path: "/staff", label: "Overview", icon: LayoutDashboard, category: "Staff Panel" },
+      { path: "/staff/liste-staff", label: "Liste staff", icon: Users, category: "Staff Panel" },
+    ],
+  },
+  {
+    category: "Bot Panel",
+    items: [
+      { path: "/staff/bot", label: "Overview", icon: LayoutDashboard, category: "Bot Panel" },
+    ],
+  },
 ];
 
 // ─── Overview ────────────────────────────────────────────────────────────────
@@ -106,7 +116,7 @@ function Overview({ session, isAdmin }: { session: ReturnType<typeof useSession>
           Navigation
         </p>
         <div className="grid gap-2">
-          {NAV_ITEMS.filter((n) => n.path !== "/staff").map(({ path, label, icon: Icon }) => (
+          {NAV_GROUPS.flatMap((g) => g.items).filter((n) => n.path !== "/staff").map(({ path, label, icon: Icon, category }) => (
             <Link
               key={path}
               href={path}
@@ -114,7 +124,10 @@ function Overview({ session, isAdmin }: { session: ReturnType<typeof useSession>
             >
               <div className="flex items-center gap-3">
                 <Icon className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                <span className="font-orbitron font-bold text-sm uppercase tracking-wider text-white">{label}</span>
+                <div>
+                  <span className="font-orbitron font-bold text-sm uppercase tracking-wider text-white">{label}</span>
+                  <p className="text-[10px] text-muted-foreground/40 font-orbitron uppercase tracking-wider">{category}</p>
+                </div>
               </div>
               <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/30 group-hover:text-primary/50 transition-colors" />
             </Link>
@@ -259,33 +272,39 @@ export default function Staff() {
 
         {/* ── Sidebar ── */}
         <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-white/5 bg-white/[0.01] pt-8 pb-6 px-3">
-          <p className="text-[10px] font-orbitron text-muted-foreground/30 uppercase tracking-widest px-3 mb-3">
-            Staff Panel
-          </p>
-          <nav className="flex flex-col gap-1">
-            {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
-              const active = path === "/staff" ? location === "/staff" : location.startsWith(path);
-              return (
-                <Link
-                  key={path}
-                  href={path}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition-colors font-orbitron uppercase tracking-wider ${
-                    active
-                      ? "bg-primary/10 text-primary border-l-2 border-primary"
-                      : "text-muted-foreground hover:text-foreground hover:bg-white/5 border-l-2 border-transparent"
-                  }`}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  {label}
-                </Link>
-              );
-            })}
+          <nav className="flex flex-col gap-5">
+            {NAV_GROUPS.map((group) => (
+              <div key={group.category}>
+                <p className="text-[10px] font-orbitron text-muted-foreground/30 uppercase tracking-widest px-3 mb-1.5">
+                  {group.category}
+                </p>
+                <div className="flex flex-col gap-0.5">
+                  {group.items.map(({ path, label, icon: Icon }) => {
+                    const active = path === "/staff" ? location === "/staff" : location.startsWith(path);
+                    return (
+                      <Link
+                        key={path}
+                        href={path}
+                        className={`flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition-colors font-orbitron uppercase tracking-wider ${
+                          active
+                            ? "bg-primary/10 text-primary border-l-2 border-primary"
+                            : "text-muted-foreground hover:text-foreground hover:bg-white/5 border-l-2 border-transparent"
+                        }`}
+                      >
+                        <Icon className="w-4 h-4 shrink-0" />
+                        {label}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </nav>
         </aside>
 
         {/* ── Mobile bottom tabs ── */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur border-t border-white/5 flex">
-          {NAV_ITEMS.map(({ path, label, icon: Icon }) => {
+          {NAV_GROUPS.flatMap((g) => g.items).map(({ path, label, icon: Icon }) => {
             const active = path === "/staff" ? location === "/staff" : location.startsWith(path);
             return (
               <Link
