@@ -139,10 +139,10 @@ function ListeStaff({ token }: { token: string }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/admin/players", { headers: { Authorization: `Bearer ${token}` } })
+    fetch("/api/staff/members", { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
       .then((data: StaffMember[]) => {
-        setMembers(data.filter((p) => p.roles.length > 0));
+        setMembers(Array.isArray(data) ? data : []);
       })
       .catch(() => setMembers([]))
       .finally(() => setLoading(false));
