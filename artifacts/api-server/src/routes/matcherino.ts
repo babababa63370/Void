@@ -5,6 +5,8 @@ import { jwtVerify } from "jose";
 import { sql } from "drizzle-orm";
 import { db as dbPlayers, playerLoginsTable } from "@workspace/db";
 import { sendMatcherinoAnnouncement } from "../lib/bot";
+import { generateMatcherinoCard } from "../lib/matcherinoCard";
+import { startAutoAnnounce, stopAutoAnnounce, getAutoAnnounceState } from "../lib/autoAnnounce";
 
 function getJwtSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -208,6 +210,53 @@ router.post("/matcherino/events/refresh", async (_req, res) => {
   } catch (err) {
     res.status(500).json({ error: "Failed to refresh events" });
   }
+});
+
+router.get("/staff/matcherino/preview/:id", async (req, res) => {
+  const requesterId = await requireStaff(req, res);
+  if (!requesterId) return;
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: "Invalid id" });
+  const [event] = await db.select().from(matcherinoEventsTable).where(eq(matcherinoEventsTable.id, id));
+  if (!event) return res.status(404).json({ error: "Event not found" });
+  try {
+    const buf = await generateMatcherinoCard({
+      id: event.id, title: event.title, gameTitle: event.gameTitle,
+      heroImg: event.heroImg || event.backgroundImg || "",
+      startAt: event.startAt?.toISOString() ?? null,
+      endAt: event.endAt?.toISOString() ?? null,
+      participantsCount: event.participantsCount,
+      totalBalance: event.totalBalance,
+      isTest: false,
+    });
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader("Cache-Control", "no-cache");
+    res.send(buf);
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message ?? "Failed to generate preview" });
+  }
+});
+
+router.get("/staff/matcherino/auto-announce/status", async (req, res) => {
+  const requesterId = await requireStaff(req, res);
+  if (!requesterId) return;
+  res.json(getAutoAnnounceState());
+});
+
+router.post("/staff/matcherino/auto-announce/start", async (req, res) => {
+  const requesterId = await requireStaff(req, res);
+  if (!requesterId) return;
+  const { channelId } = req.body as { channelId: string };
+  if (!channelId) return res.status(400).json({ error: "channelId required" });
+  startAutoAnnounce(channelId);
+  res.json({ success: true, state: getAutoAnnounceState() });
+});
+
+router.post("/staff/matcherino/auto-announce/stop", async (req, res) => {
+  const requesterId = await requireStaff(req, res);
+  if (!requesterId) return;
+  stopAutoAnnounce();
+  res.json({ success: true, state: getAutoAnnounceState() });
 });
 
 router.post("/staff/matcherino/announce", async (req, res) => {

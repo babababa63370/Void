@@ -1,4 +1,4 @@
-import { pgTable, integer, text, timestamp, real } from "drizzle-orm/pg-core";
+import { pgTable, integer, text, timestamp, real, boolean } from "drizzle-orm/pg-core";
 
 export const matcherinoEventsTable = pgTable("matcherino_events", {
   id: integer("id").primaryKey(),
@@ -16,6 +16,8 @@ export const matcherinoEventsTable = pgTable("matcherino_events", {
   gameImage: text("game_image"),
   gameSlug: text("game_slug"),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
+  announced: boolean("announced").notNull().default(false),
+  announcedAt: timestamp("announced_at", { withTimezone: true }),
 });
 
 export type MatcherinoEvent = typeof matcherinoEventsTable.$inferSelect;

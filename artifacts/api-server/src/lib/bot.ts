@@ -82,6 +82,7 @@ export interface MatcherinoAnnouncePayload {
   participantsCount: number;
   totalBalance: number;
   isTest?: boolean;
+  pingId?: string;
 }
 
 export async function sendMatcherinoAnnouncement(
@@ -96,9 +97,10 @@ export async function sendMatcherinoAnnouncement(
   const filename = `tournament-${event.id}${event.isTest ? "-test" : ""}.png`;
   const attachment = new AttachmentBuilder(imageBuffer, { name: filename });
 
+  const ping = event.pingId ? `<@&${event.pingId}> ` : "";
   const caption = event.isTest
     ? `🧪 **[TEST]** — Voici un aperçu de la carte pour **${event.title}**`
-    : `🏆 **Nouveau tournoi VOID !** → <https://matcherino.com/tournaments/${event.id}>`;
+    : `${ping}🏆 **Nouveau tournoi VOID !** → <https://matcherino.com/tournaments/${event.id}>`;
 
   await channel.send({ content: caption, files: [attachment] });
 }

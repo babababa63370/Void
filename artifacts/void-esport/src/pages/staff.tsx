@@ -586,6 +586,15 @@ function formatEventDate(iso: string) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+interface AutoState {
+  enabled: boolean;
+  channelId: string;
+  lastCheckedAt: string | null;
+  nextCheckAt: string | null;
+  lastAnnouncedTitle: string | null;
+  lastAnnouncedAt: string | null;
+}
+
 function MatcherinoPage({ token }: { token: string }) {
   const baseUrl = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
 
@@ -597,12 +606,20 @@ function MatcherinoPage({ token }: { token: string }) {
   const [sending, setSending] = useState<Record<number, boolean>>({});
   const [feedback, setFeedback] = useState<Record<number, "ok" | "err">>({});
 
+  const [autoState, setAutoState] = useState<AutoState | null>(null);
+  const [autoChannelId, setAutoChannelId] = useState("");
+  const [autoToggling, setAutoToggling] = useState(false);
+
+  const [previewId, setPreviewId] = useState<number | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const authHeader = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+
   const loadEvents = useCallback((fresh = false) => {
     if (fresh) setRefreshing(true);
     else setLoading(true);
-    const url = fresh
-      ? `${baseUrl}/api/matcherino/events/refresh`
-      : `${baseUrl}/api/matcherino/events`;
+    const url = fresh ? `${baseUrl}/api/matcherino/events/refresh` : `${baseUrl}/api/matcherino/events`;
     fetch(url, { method: fresh ? "POST" : "GET" })
       .then((r) => r.json())
       .then((d: { events: MEvent[] }) => setEvents(d.events ?? []))
@@ -610,7 +627,18 @@ function MatcherinoPage({ token }: { token: string }) {
       .finally(() => { setLoading(false); setRefreshing(false); });
   }, [baseUrl]);
 
-  useEffect(() => { loadEvents(); }, [loadEvents]);
+  const loadAutoState = useCallback(() => {
+    fetch(`${baseUrl}/api/staff/matcherino/auto-announce/status`, { headers: authHeader })
+      .then((r) => r.json())
+      .then((d: AutoState) => { setAutoState(d); setAutoChannelId(d.channelId || ""); })
+      .catch(() => {});
+  }, [baseUrl, token]);
+
+  useEffect(() => { loadEvents(); loadAutoState(); }, [loadEvents, loadAutoState]);
+  useEffect(() => {
+    const id = setInterval(loadAutoState, 15000);
+    return () => clearInterval(id);
+  }, [loadAutoState]);
 
   async function announce(eventId: number, isTest: boolean) {
     if (!channelId.trim()) return;
@@ -619,30 +647,63 @@ function MatcherinoPage({ token }: { token: string }) {
     try {
       const r = await fetch(`${baseUrl}/api/staff/matcherino/announce`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        headers: authHeader,
         body: JSON.stringify({ eventId, channelId: channelId.trim(), isTest }),
       });
       if (r.ok) {
         if (!isTest) setAnnounced((p) => ({ ...p, [eventId]: true }));
         setFeedback((p) => ({ ...p, [eventId]: "ok" }));
-      } else {
-        setFeedback((p) => ({ ...p, [eventId]: "err" }));
-      }
-    } catch {
-      setFeedback((p) => ({ ...p, [eventId]: "err" }));
-    } finally {
+      } else setFeedback((p) => ({ ...p, [eventId]: "err" }));
+    } catch { setFeedback((p) => ({ ...p, [eventId]: "err" })); }
+    finally {
       setSending((p) => ({ ...p, [eventId]: false }));
       setTimeout(() => setFeedback((p) => { const n = { ...p }; delete n[eventId]; return n; }), 3000);
     }
   }
 
-  function toggleAnnounced(eventId: number) {
-    setAnnounced((p) => ({ ...p, [eventId]: !p[eventId] }));
+  async function toggleAutoAnnounce() {
+    if (!autoState) return;
+    setAutoToggling(true);
+    try {
+      if (autoState.enabled) {
+        const r = await fetch(`${baseUrl}/api/staff/matcherino/auto-announce/stop`, { method: "POST", headers: authHeader });
+        if (r.ok) setAutoState(await r.json().then((d: any) => d.state));
+      } else {
+        if (!autoChannelId.trim()) return;
+        const r = await fetch(`${baseUrl}/api/staff/matcherino/auto-announce/start`, {
+          method: "POST", headers: authHeader,
+          body: JSON.stringify({ channelId: autoChannelId.trim() }),
+        });
+        if (r.ok) setAutoState(await r.json().then((d: any) => d.state));
+      }
+    } finally { setAutoToggling(false); }
+  }
+
+  async function loadPreview(eventId: number) {
+    if (previewId === eventId) { setPreviewId(null); setPreviewUrl(null); return; }
+    setPreviewId(eventId);
+    setPreviewLoading(true);
+    if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(null); }
+    try {
+      const r = await fetch(`${baseUrl}/api/staff/matcherino/preview/${eventId}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (r.ok) {
+        const blob = await r.blob();
+        setPreviewUrl(URL.createObjectURL(blob));
+      }
+    } catch {} finally { setPreviewLoading(false); }
   }
 
   const now = new Date();
   const active = events.filter((e) => !e.endAt || new Date(e.endAt) > now);
   const finished = events.filter((e) => e.endAt && new Date(e.endAt) <= now);
+
+  function fmtRelative(iso: string) {
+    const diff = new Date(iso).getTime() - Date.now();
+    const abs = Math.abs(diff);
+    if (abs < 60000) return "à l'instant";
+    if (abs < 3600000) return `${Math.round(abs / 60000)} min`;
+    return `${Math.round(abs / 3600000)} h`;
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -661,23 +722,99 @@ function MatcherinoPage({ token }: { token: string }) {
         </button>
       </div>
 
-      {/* Channel ID input */}
-      <div className="p-4 border border-violet-500/20 bg-violet-500/5 space-y-3">
-        <p className="text-[11px] font-orbitron text-violet-400/70 uppercase tracking-widest">Canal Discord cible</p>
+      {/* ── Auto-announce module ── */}
+      <div className={`p-4 border space-y-4 transition-colors ${autoState?.enabled ? "border-primary/40 bg-primary/5" : "border-white/10 bg-white/[0.02]"}`}>
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-[11px] font-orbitron uppercase tracking-widest text-primary/80 mb-0.5">Annonce automatique</p>
+            <p className="text-[11px] text-muted-foreground/50">Détecte les nouveaux tournois et envoie la carte + ping automatiquement</p>
+          </div>
+          <button
+            onClick={toggleAutoAnnounce}
+            disabled={autoToggling || (!autoState?.enabled && !autoChannelId.trim())}
+            className={`flex items-center gap-2 px-4 py-2 font-orbitron font-bold text-xs uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              autoState?.enabled
+                ? "bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20"
+                : "bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20"
+            }`}
+          >
+            {autoToggling ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : autoState?.enabled ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+            {autoState?.enabled ? "Désactiver" : "Activer"}
+          </button>
+        </div>
+
         <div className="flex items-center gap-2 border border-white/10 bg-white/[0.03] px-3 py-2.5">
-          <Hash className="w-4 h-4 text-violet-400/60 shrink-0" />
+          <Hash className="w-4 h-4 text-primary/40 shrink-0" />
+          <input
+            type="text"
+            value={autoChannelId}
+            onChange={(e) => setAutoChannelId(e.target.value)}
+            disabled={autoState?.enabled}
+            placeholder="ID canal Discord pour les annonces automatiques"
+            className="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder:text-muted-foreground/30 font-mono disabled:opacity-50"
+          />
+        </div>
+
+        {autoState?.enabled && (
+          <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
+            <div className="p-2.5 border border-white/5 bg-white/[0.02]">
+              <p className="text-muted-foreground/40 uppercase tracking-widest text-[10px] mb-0.5">Dernier check</p>
+              <p className="text-white/70">{autoState.lastCheckedAt ? fmtRelative(autoState.lastCheckedAt) : "—"}</p>
+            </div>
+            <div className="p-2.5 border border-white/5 bg-white/[0.02]">
+              <p className="text-muted-foreground/40 uppercase tracking-widest text-[10px] mb-0.5">Prochain check</p>
+              <p className="text-white/70">{autoState.nextCheckAt ? fmtRelative(autoState.nextCheckAt) : "—"}</p>
+            </div>
+            {autoState.lastAnnouncedTitle && (
+              <div className="col-span-2 p-2.5 border border-primary/20 bg-primary/5">
+                <p className="text-muted-foreground/40 uppercase tracking-widest text-[10px] mb-0.5">Dernier annoncé</p>
+                <p className="text-primary truncate">{autoState.lastAnnouncedTitle}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Manual channel ── */}
+      <div className="p-4 border border-white/8 bg-white/[0.01] space-y-3">
+        <p className="text-[11px] font-orbitron text-muted-foreground/50 uppercase tracking-widest">Canal manuel (annonce / test)</p>
+        <div className="flex items-center gap-2 border border-white/10 bg-white/[0.03] px-3 py-2.5">
+          <Hash className="w-4 h-4 text-muted-foreground/30 shrink-0" />
           <input
             type="text"
             value={channelId}
             onChange={(e) => setChannelId(e.target.value)}
-            placeholder="ID du canal Discord (ex: 1234567890123456789)"
+            placeholder="ID canal Discord"
             className="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder:text-muted-foreground/30 font-mono"
           />
         </div>
-        <p className="text-[10px] text-muted-foreground/40 font-mono">
-          Clic droit sur le canal Discord → Copier l'identifiant (mode développeur requis)
-        </p>
       </div>
+
+      {/* ── Preview panel ── */}
+      <AnimatePresence>
+        {previewId !== null && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="overflow-hidden"
+          >
+            <div className="border border-primary/20 bg-primary/5 p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] font-orbitron text-primary/70 uppercase tracking-widest">Aperçu de la carte</p>
+                <button onClick={() => { setPreviewId(null); setPreviewUrl(null); }} className="text-muted-foreground/40 hover:text-white text-xs transition-colors">✕ Fermer</button>
+              </div>
+              {previewLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground/50 text-sm py-8 justify-center">
+                  <Loader2 className="w-4 h-4 animate-spin" />Génération…
+                </div>
+              ) : previewUrl ? (
+                <img src={previewUrl} alt="Preview carte" className="w-full border border-white/10 rounded-sm" />
+              ) : null}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {loading ? (
         <div className="flex items-center gap-2 text-muted-foreground/50 text-sm">
@@ -687,50 +824,37 @@ function MatcherinoPage({ token }: { token: string }) {
         <p className="text-muted-foreground/40 text-sm font-mono">Aucun événement Matcherino trouvé.</p>
       ) : (
         <div className="space-y-6">
-          {/* Active events */}
           {active.length > 0 && (
             <div>
-              <p className="text-[11px] font-orbitron text-primary/60 uppercase tracking-widest mb-3">
-                En cours / à venir ({active.length})
-              </p>
+              <p className="text-[11px] font-orbitron text-primary/60 uppercase tracking-widest mb-3">En cours / à venir ({active.length})</p>
               <div className="grid gap-3">
                 {active.map((event, i) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    i={i}
-                    announced={!!announced[event.id]}
-                    sending={!!sending[event.id]}
-                    feedback={feedback[event.id]}
-                    channelId={channelId}
-                    onToggle={() => toggleAnnounced(event.id)}
+                  <EventCard key={event.id} event={event} i={i}
+                    announced={!!announced[event.id]} sending={!!sending[event.id]}
+                    feedback={feedback[event.id]} channelId={channelId}
+                    isPreviewing={previewId === event.id}
+                    onToggle={() => setAnnounced((p) => ({ ...p, [event.id]: !p[event.id] }))}
                     onAnnounce={() => announce(event.id, false)}
                     onTest={() => announce(event.id, true)}
+                    onPreview={() => loadPreview(event.id)}
                   />
                 ))}
               </div>
             </div>
           )}
-
-          {/* Finished events */}
           {finished.length > 0 && (
             <div>
-              <p className="text-[11px] font-orbitron text-muted-foreground/30 uppercase tracking-widest mb-3">
-                Terminés ({finished.length})
-              </p>
+              <p className="text-[11px] font-orbitron text-muted-foreground/30 uppercase tracking-widest mb-3">Terminés ({finished.length})</p>
               <div className="grid gap-3 opacity-60">
                 {finished.map((event, i) => (
-                  <EventCard
-                    key={event.id}
-                    event={event}
-                    i={i}
-                    announced={!!announced[event.id]}
-                    sending={!!sending[event.id]}
-                    feedback={feedback[event.id]}
-                    channelId={channelId}
-                    onToggle={() => toggleAnnounced(event.id)}
+                  <EventCard key={event.id} event={event} i={i}
+                    announced={!!announced[event.id]} sending={!!sending[event.id]}
+                    feedback={feedback[event.id]} channelId={channelId}
+                    isPreviewing={previewId === event.id}
+                    onToggle={() => setAnnounced((p) => ({ ...p, [event.id]: !p[event.id] }))}
                     onAnnounce={() => announce(event.id, false)}
                     onTest={() => announce(event.id, true)}
+                    onPreview={() => loadPreview(event.id)}
                   />
                 ))}
               </div>
@@ -743,7 +867,7 @@ function MatcherinoPage({ token }: { token: string }) {
 }
 
 function EventCard({
-  event, i, announced, sending, feedback, channelId, onToggle, onAnnounce, onTest,
+  event, i, announced, sending, feedback, channelId, isPreviewing, onToggle, onAnnounce, onTest, onPreview,
 }: {
   event: MEvent;
   i: number;
@@ -751,9 +875,11 @@ function EventCard({
   sending: boolean;
   feedback?: "ok" | "err";
   channelId: string;
+  isPreviewing: boolean;
   onToggle: () => void;
   onAnnounce: () => void;
   onTest: () => void;
+  onPreview: () => void;
 }) {
   const cover = event.heroImg || event.backgroundImg || event.thumbnailImg;
   const noChannel = !channelId.trim();
@@ -816,6 +942,19 @@ function EventCard({
               {announced
                 ? <><ToggleRight className="w-3.5 h-3.5" /> Actif</>
                 : <><ToggleLeft className="w-3.5 h-3.5" /> Inactif</>}
+            </button>
+
+            {/* Preview */}
+            <button
+              onClick={onPreview}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 border text-[10px] font-orbitron uppercase tracking-wider transition-colors ${
+                isPreviewing
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : "border-white/10 bg-white/[0.02] text-muted-foreground/50 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              <ExternalLink className="w-3 h-3" />
+              {isPreviewing ? "Fermer" : "Preview"}
             </button>
 
             {/* Test */}

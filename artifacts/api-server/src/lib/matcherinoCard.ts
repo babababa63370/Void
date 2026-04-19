@@ -79,8 +79,8 @@ export async function generateMatcherinoCard(event: CardEvent): Promise<Buffer> 
 
   const prizeTag =
     event.totalBalance > 0
-      ? `<text x="80" y="495" font-family="monospace" font-size="13" fill="#8b5cf6" letter-spacing="3">PRIZE POOL</text>
-         <text x="80" y="522" font-family="monospace" font-weight="bold" font-size="26" fill="#8b5cf6">$${event.totalBalance}</text>`
+      ? `<text x="80" y="495" font-family="monospace" font-size="13" fill="#8b5cf6cc" letter-spacing="3">PRIZE POOL</text>
+         <text x="80" y="522" font-family="monospace" font-weight="bold" font-size="26" fill="#a78bfa">$${event.totalBalance}</text>`
       : "";
 
   const testBanner = event.isTest
@@ -148,14 +148,14 @@ export async function generateMatcherinoCard(event: CardEvent): Promise<Buffer> 
   <rect x="0" y="0" width="${W}" height="3" fill="#8b5cf6"/>
 
   <!-- Void label -->
-  <text x="80" y="76" font-family="monospace" font-size="11" fill="#8b5cf680" letter-spacing="5">VOID ESPORT</text>
-  <text x="192" y="76" font-family="monospace" font-size="11" fill="#ffffff20" letter-spacing="5">· MATCHERINO</text>
+  <text x="80" y="76" font-family="monospace" font-size="11" fill="#8b5cf6cc" letter-spacing="5">VOID ESPORT</text>
+  <text x="192" y="76" font-family="monospace" font-size="11" fill="#ffffff70" letter-spacing="5">· MATCHERINO</text>
 
   <!-- Separator line under label -->
-  <line x1="80" y1="88" x2="480" y2="88" stroke="#8b5cf620" stroke-width="1"/>
+  <line x1="80" y1="88" x2="480" y2="88" stroke="#8b5cf640" stroke-width="1"/>
 
   <!-- Tournament ID (small, above title) -->
-  <text x="80" y="140" font-family="monospace" font-size="12" fill="#8b5cf660" letter-spacing="4">#${event.id}</text>
+  <text x="80" y="140" font-family="monospace" font-size="12" fill="#8b5cf6cc" letter-spacing="4">#${event.id}</text>
 
   <!-- Title line 1 -->
   <text x="80" y="215" font-family="sans-serif" font-weight="bold" font-size="48" fill="white">${escapeXml(titleL1)}</text>
@@ -167,11 +167,11 @@ export async function generateMatcherinoCard(event: CardEvent): Promise<Buffer> 
   ${gameTag}
 
   <!-- Date row -->
-  <text x="80" y="${titleL2 ? 395 : 360}" font-family="monospace" font-size="12" fill="#ffffff40" letter-spacing="3">DATE</text>
-  <text x="80" y="${titleL2 ? 422 : 387}" font-family="monospace" font-size="18" fill="white">${escapeXml(dateStr + endStr)}</text>
+  <text x="80" y="${titleL2 ? 395 : 360}" font-family="monospace" font-size="12" fill="#8b5cf6cc" letter-spacing="3">DATE</text>
+  <text x="80" y="${titleL2 ? 422 : 387}" font-family="monospace" font-size="18" fill="#ffffffee">${escapeXml(dateStr + endStr)}</text>
 
   <!-- Participants -->
-  <text x="${event.totalBalance > 0 ? 300 : 80}" y="495" font-family="monospace" font-size="13" fill="#ffffff40" letter-spacing="3">PARTICIPANTS</text>
+  <text x="${event.totalBalance > 0 ? 300 : 80}" y="495" font-family="monospace" font-size="13" fill="#8b5cf6cc" letter-spacing="3">PARTICIPANTS</text>
   <text x="${event.totalBalance > 0 ? 300 : 80}" y="522" font-family="monospace" font-weight="bold" font-size="26" fill="white">${event.participantsCount}</text>
 
   <!-- Prize pool (if any) -->
