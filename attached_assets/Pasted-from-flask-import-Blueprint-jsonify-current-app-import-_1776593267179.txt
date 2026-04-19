@@ -1,0 +1,119 @@
+from flask import Blueprint, jsonify, current_app
+import requests
+from requests.exceptions import ConnectionError, Timeout, RequestException
+from utils.cdn_mapper import get_brawler_assets, CDN_BASE
+
+player_bp = Blueprint('player', __name__)
+
+# Codes HTTP connus de l'API Brawl Stars
+BS_ERROR_MESSAGES = {
+    400: "Requête invalide (tag mal formé ?)",
+    403: "Clé API invalide ou accès refusé",
+    404: "Joueur introuvable",
+    429: "Trop de requêtes — réessaie dans quelques secondes",
+    500: "Erreur serveur Brawl Stars",
+    503: "API Brawl Stars temporairement indisponible",
+}
+
+def _build_player_info(data):
+    """Construit le dictionnaire d'infos joueur."""
+    icon_id = data.get("icon", {}).get("id", 0)
+    return {
+        "tag": data.get("tag"),
+        "name": data.get("name"),
+        "nameColor": data.get("nameColor"),
+        "icon": {
+            "id": icon_id,
+            "url": f"{CDN_BASE}/profile-icons/regular/{icon_id}.png"
+        },
+        "trophies": data.get("trophies"),
+        "highestTrophies": data.get("highestTrophies"),
+        "expLevel": data.get("expLevel"),
+        "expPoints": data.get("expPoints"),
+        "isQualified": data.get("isQualifiedFromChampionshipChallenge", False),
+        "prestige": {
+            "level": data.get("totalPrestigeLevel", 0),
+            "image": f"{CDN_BASE}/prestige/templates/total.png"
+        },
+        "globalStats": {
+            "3vs3Victories": data.get("3vs3Victories"),
+            "soloVictories": data.get("soloVictories"),
+            "duoVictories": data.get("duoVictories")
+        },
+        "club": data.get("club", {})
+    }
+
+def _build_brawlers(brawlers_data):
+    """Construit la liste des brawlers enrichis avec leurs assets CDN."""
+    processed = []
+    for b in brawlers_data:
+        assets = get_brawler_assets(b)
+        processed.append({
+            "id": b.get("id"),
+            "name": b.get("name"),
+            "power": b.get("power"),
+            "trophies": b.get("trophies"),
+            "prestigeLevel": b.get("prestigeLevel"),
+            "winStreak": {
+                "current": b.get("currentWinStreak"),
+                "max": b.get("maxWinStreak")
+            },
+            "assets": assets,
+            "buffs": assets.get("buffs", {}),
+            "gears": [
+                {"id": g["id"], "name": g.get("name"), "image": f"{CDN_BASE}/gears/regular/{g['id']}.png"}
+                for g in b.get("gears", [])
+            ],
+            "gadgets": [
+                {"id": g["id"], "name": g.get("name"), "image": f"{CDN_BASE}/gadgets/border/{g['id']}.png"}
+                for g in b.get("gadgets", [])
+            ],
+            "starPowers": [
+                {"id": s["id"], "name": s.get("name"), "image": f"{CDN_BASE}/star-powers/border/{s['id']}.png"}
+                for s in b.get("starPowers", [])
+            ],
+            "hyperCharges": [
+                {"id": h["id"], "name": h.get("name"), "image": assets["hc_icon"]}
+                for h in b.get("hyperCharges", [])
+            ]
+        })
+    return processed
+
+
+@player_bp.route('/player/<string:tag>')
+def get_player(tag):
+    api_key = current_app.config['BS_API_KEY']
+    headers = {"Authorization": f"Bearer {api_key}", "Accept": "application/json"}
+
+    player_tag = tag.strip("#").upper()
+    url = f"https://api.brawlstars.com/v1/players/%23{player_tag}"
+
+    # --- Appel API externe ---
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+    except ConnectionError:
+        return jsonify({"error": "Impossible de contacter l'API Brawl Stars (connexion refusée)"}), 503
+    except Timeout:
+        return jsonify({"error": "L'API Brawl Stars a mis trop de temps à répondre"}), 504
+    except RequestException as e:
+        return jsonify({"error": f"Erreur réseau inattendue : {str(e)}"}), 502
+
+    # --- Vérification du code HTTP ---
+    if response.status_code != 200:
+        message = BS_ERROR_MESSAGES.get(response.status_code, f"Erreur inconnue ({response.status_code})")
+        return jsonify({"error": message}), response.status_code
+
+    # --- Parsing de la réponse ---
+    try:
+        data = response.json()
+    except ValueError:
+        return jsonify({"error": "Réponse invalide reçue de l'API Brawl Stars"}), 502
+
+    # --- Construction de la réponse ---
+    try:
+        player_info = _build_player_info(data)
+        brawlers = _build_brawlers(data.get("brawlers", []))
+    except Exception as e:
+        return jsonify({"error": f"Erreur lors du traitement des données : {str(e)}"}), 500
+
+    return jsonify({"player": player_info, "brawlers": brawlers})

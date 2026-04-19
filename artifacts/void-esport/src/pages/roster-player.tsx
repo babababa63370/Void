@@ -506,39 +506,46 @@ function EditPanel({
 
 // ─── BrawlProfile ─────────────────────────────────────────────────────────────
 
-interface BrawlBrawler {
+interface MeonixBrawler {
   id: number;
   name: string;
   power: number;
-  rank: number;
   trophies: number;
-  highestTrophies: number;
-  gears: { name: string; level: number }[];
-  starPowers: { id: number; name: string }[];
-  gadgets: { id: number; name: string }[];
+  prestigeLevel: number;
+  winStreak: { current: number; max: number };
+  assets: Record<string, string>;
+  gears: { id: number; name: string; image: string }[];
+  gadgets: { id: number; name: string; image: string }[];
+  starPowers: { id: number; name: string; image: string }[];
+  hyperCharges: { id: number; name: string; image: string }[];
 }
 
-interface BrawlPlayer {
+interface MeonixPlayer {
   tag: string;
   name: string;
   nameColor: string;
-  icon: { id: number };
+  icon: { id: number; url: string };
   trophies: number;
   highestTrophies: number;
   expLevel: number;
   expPoints: number;
-  isQualifiedFromChampionshipChallenge: boolean;
-  victories3v3: number;
-  soloVictories: number;
-  duoVictories: number;
-  bestRoboRumbleTime: number;
-  bestTimeAsBigBrawler: number;
+  isQualified: boolean;
+  prestige: { level: number; image: string };
+  globalStats: {
+    "3vs3Victories": number;
+    soloVictories: number;
+    duoVictories: number;
+  };
   club: { tag: string; name: string } | null;
-  brawlers: BrawlBrawler[];
+}
+
+interface MeonixResponse {
+  player: MeonixPlayer;
+  brawlers: MeonixBrawler[];
 }
 
 function BrawlProfile({ tag }: { tag: string }) {
-  const [data, setData] = useState<BrawlPlayer | null>(null);
+  const [data, setData] = useState<MeonixResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const baseUrl = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";
@@ -551,7 +558,7 @@ function BrawlProfile({ tag }: { tag: string }) {
           const err = await r.json().catch(() => ({ error: r.statusText })) as { error: string };
           throw new Error(err.error ?? r.statusText);
         }
-        return r.json() as Promise<BrawlPlayer>;
+        return r.json() as Promise<MeonixResponse>;
       })
       .then(setData)
       .catch((e: Error) => setError(e.message))
@@ -574,12 +581,14 @@ function BrawlProfile({ tag }: { tag: string }) {
     );
   }
 
-  const maxTrophies = Math.max(...data.brawlers.map((b) => b.highestTrophies), 1);
-  const top5 = [...data.brawlers]
-    .sort((a, b) => b.highestTrophies - a.highestTrophies)
+  const { player, brawlers } = data;
+
+  const maxTrophies = Math.max(...brawlers.map((b) => b.trophies), 1);
+  const top5 = [...brawlers]
+    .sort((a, b) => b.trophies - a.trophies)
     .slice(0, 5);
 
-  const nameColor = data.nameColor?.replace("0xff", "#") ?? "#ffffff";
+  const nameColor = player.nameColor?.replace("0xff", "#") ?? "#ffffff";
 
   return (
     <motion.div
@@ -592,21 +601,21 @@ function BrawlProfile({ tag }: { tag: string }) {
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/8 bg-black/30">
         <div className="flex items-center gap-2">
           <img
-            src={`https://cdn.brawlify.com/profile-icons/regular/${data.icon.id}.png`}
+            src={player.icon.url}
             alt="icon"
             className="w-9 h-9 rounded-full border border-white/10 object-contain bg-white/5"
             onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
           />
           <div>
             <p className="font-orbitron font-bold text-sm leading-tight" style={{ color: nameColor }}>
-              {data.name}
+              {player.name}
             </p>
-            <p className="text-[10px] text-white/30 font-mono">{data.tag}</p>
+            <p className="text-[10px] text-white/30 font-mono">{player.tag}</p>
           </div>
         </div>
         <div className="text-right">
           <p className="text-[10px] text-white/30 font-orbitron uppercase tracking-widest">Niveau</p>
-          <p className="font-orbitron font-bold text-primary text-base">{data.expLevel}</p>
+          <p className="font-orbitron font-bold text-primary text-base">{player.expLevel}</p>
         </div>
       </div>
 
@@ -614,17 +623,17 @@ function BrawlProfile({ tag }: { tag: string }) {
       <div className="grid grid-cols-3 divide-x divide-white/8 border-b border-white/8">
         <div className="flex flex-col items-center py-3 gap-0.5">
           <Trophy className="w-3.5 h-3.5 text-yellow-400 mb-0.5" />
-          <p className="font-orbitron font-bold text-white text-sm">{data.trophies.toLocaleString()}</p>
+          <p className="font-orbitron font-bold text-white text-sm">{player.trophies.toLocaleString()}</p>
           <p className="text-[9px] text-white/30 uppercase tracking-wider">Trophées</p>
         </div>
         <div className="flex flex-col items-center py-3 gap-0.5">
           <Star className="w-3.5 h-3.5 text-orange-400 mb-0.5" />
-          <p className="font-orbitron font-bold text-white text-sm">{data.highestTrophies.toLocaleString()}</p>
+          <p className="font-orbitron font-bold text-white text-sm">{player.highestTrophies.toLocaleString()}</p>
           <p className="text-[9px] text-white/30 uppercase tracking-wider">Record</p>
         </div>
         <div className="flex flex-col items-center py-3 gap-0.5">
           <Shield className="w-3.5 h-3.5 text-primary mb-0.5" />
-          <p className="font-orbitron font-bold text-white text-sm">{data.brawlers.length}</p>
+          <p className="font-orbitron font-bold text-white text-sm">{brawlers.length}</p>
           <p className="text-[9px] text-white/30 uppercase tracking-wider">Brawlers</p>
         </div>
       </div>
@@ -632,25 +641,25 @@ function BrawlProfile({ tag }: { tag: string }) {
       {/* Victories */}
       <div className="grid grid-cols-3 divide-x divide-white/8 border-b border-white/8 bg-white/[0.02]">
         <div className="flex flex-col items-center py-2.5">
-          <p className="font-orbitron font-bold text-white text-xs">{data.victories3v3.toLocaleString()}</p>
+          <p className="font-orbitron font-bold text-white text-xs">{(player.globalStats["3vs3Victories"] ?? 0).toLocaleString()}</p>
           <p className="text-[9px] text-white/30 uppercase tracking-wider">3v3</p>
         </div>
         <div className="flex flex-col items-center py-2.5">
-          <p className="font-orbitron font-bold text-white text-xs">{data.soloVictories.toLocaleString()}</p>
+          <p className="font-orbitron font-bold text-white text-xs">{(player.globalStats.soloVictories ?? 0).toLocaleString()}</p>
           <p className="text-[9px] text-white/30 uppercase tracking-wider">Solo</p>
         </div>
         <div className="flex flex-col items-center py-2.5">
-          <p className="font-orbitron font-bold text-white text-xs">{data.duoVictories.toLocaleString()}</p>
+          <p className="font-orbitron font-bold text-white text-xs">{(player.globalStats.duoVictories ?? 0).toLocaleString()}</p>
           <p className="text-[9px] text-white/30 uppercase tracking-wider">Duo</p>
         </div>
       </div>
 
       {/* Club */}
-      {data.club && (
+      {player.club && (
         <div className="flex items-center gap-2 px-4 py-2.5 border-b border-white/8 text-xs text-white/50 font-orbitron">
           <span className="text-primary">🏆</span>
-          <span className="truncate">{data.club.name}</span>
-          <span className="text-white/20 font-mono text-[10px]">{data.club.tag}</span>
+          <span className="truncate">{player.club.name}</span>
+          <span className="text-white/20 font-mono text-[10px]">{player.club.tag}</span>
         </div>
       )}
 
@@ -661,7 +670,7 @@ function BrawlProfile({ tag }: { tag: string }) {
           {top5.map((b) => (
             <div key={b.id} className="flex items-center gap-3">
               <img
-                src={`https://cdn.brawlify.com/brawlers/borderless/${b.id}.png`}
+                src={b.assets.image ?? `https://cdn.brawlify.com/brawlers/borderless/${b.id}.png`}
                 alt={b.name}
                 className="w-8 h-8 object-contain"
                 onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
@@ -669,12 +678,12 @@ function BrawlProfile({ tag }: { tag: string }) {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] font-orbitron uppercase tracking-wide text-white/70 truncate">{b.name}</span>
-                  <span className="text-[10px] font-orbitron text-yellow-400 ml-2 shrink-0">{b.highestTrophies.toLocaleString()}</span>
+                  <span className="text-[10px] font-orbitron text-yellow-400 ml-2 shrink-0">{b.trophies.toLocaleString()}</span>
                 </div>
                 <div className="h-1 bg-white/10 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-gradient-to-r from-primary to-yellow-400 rounded-full"
-                    style={{ width: `${(b.highestTrophies / maxTrophies) * 100}%` }}
+                    style={{ width: `${(b.trophies / maxTrophies) * 100}%` }}
                   />
                 </div>
               </div>

@@ -9,7 +9,7 @@ router.get("/brawl/player/:tag", async (req, res) => {
 
   try {
     const response = await fetch(
-      `https://api.brawlapi.com/v1/players/${encoded}`,
+      `https://api.meonix.me/api/player/${encoded}`,
       { headers: { Accept: "application/json" } },
     );
 
