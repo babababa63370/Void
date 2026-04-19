@@ -57,6 +57,12 @@ export default defineConfig({
             next();
             return;
           }
+          // /staff and all sub-routes serve staff.html
+          if (stripped === "/staff" || stripped.startsWith("/staff/")) {
+            req.url = "/staff.html";
+            next();
+            return;
+          }
           const target = routeToHtml[stripped];
           if (target) req.url = target;
           next();

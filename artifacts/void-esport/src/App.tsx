@@ -41,6 +41,7 @@ function Router() {
       <Route path="/players-login" component={PlayersLogin} />
       <Route path="/meonix" component={Meonix} />
       <Route path="/staff" component={Staff} />
+      <Route path="/staff/:section" component={Staff} />
       <Route component={NotFound} />
     </Switch>
   );
