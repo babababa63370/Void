@@ -16,12 +16,14 @@ export interface BotInfo {
   discriminator: string | null;
   avatar: string | null;
   id: string | null;
+  connectedAt: string | null;
   presence: BotPresence;
 }
 
 const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 let connected = false;
+let connectedAt: Date | null = null;
 let currentPresence: BotPresence = {
   status: "online",
   activityKind: "none",
@@ -31,6 +33,7 @@ let currentPresence: BotPresence = {
 
 client.once("clientReady", () => {
   connected = true;
+  connectedAt = new Date();
   console.log(`[Bot] Logged in as ${client.user?.tag}`);
 });
 
@@ -63,6 +66,7 @@ export function getBotInfo(): BotInfo {
     discriminator: client.user?.discriminator ?? null,
     avatar: client.user?.avatar ?? null,
     id: client.user?.id ?? null,
+    connectedAt: connectedAt?.toISOString() ?? null,
     presence: { ...currentPresence },
   };
 }

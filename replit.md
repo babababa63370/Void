@@ -47,6 +47,7 @@ Competitive Brawl Stars esport clan site with cyberpunk/esports aesthetic.
 - `/privacy` — Privacy policy
 - `/achievements` — Palmarès / Legacy (page vide pour l'instant : "Rien encore pour l'instant")
 - `/players-login` — Player Portal (Discord OAuth login, noindex, hidden from nav)
+- `/staff` — Staff Panel (Discord OAuth requis + rôle `staff`), sous-routes : Overview / Liste staff / Bot Panel
 - `/meonix` — Zone restreinte accessible uniquement à l'ID Discord `1243206708604702791` (sinon 404)
 - `/*` — Animated 404 page
 
@@ -98,8 +99,12 @@ Express 5 server on port 8080, paths proxied at `/api`.
 - `GET /api/healthz` — health check
 - `GET /api/auth/discord/url?redirectUri=...` — returns Discord OAuth authorization URL
 - `POST /api/auth/discord/exchange` — exchanges OAuth code for Discord user info + signed JWT
-- `GET /api/auth/verify` — validates JWT (Bearer token), returns Discord ID and user info
+- `GET /api/auth/verify` — validates JWT (Bearer token), returns Discord ID, user info + roles
 - `GET /api/brawl/player/:tag` — proxy vers l'API Brawl Stars pour récupérer les stats d'un joueur
+- `GET /api/staff/members` — liste des membres (staff uniquement) avec rôles colorés
+- `GET /api/bot/status` — infos du bot Discord (connecté, nom, avatar, ID, connectedAt, presence)
+- `PATCH /api/bot/presence` — met à jour statut + activité du bot (staff uniquement)
+- `GET /api/admin/*` — routes admin (ID Discord `1243206708604702791` uniquement)
 
 ### Brawl Stars API
 - La route `/api/brawl/player/:tag` appelle actuellement `api.brawlapi.com/v1/players/:tag` sans token (affiche "Profil introuvable" car cette API requiert une auth)
@@ -114,15 +119,24 @@ Express 5 server on port 8080, paths proxied at `/api`.
 6. Protected pages send `Authorization: Bearer <token>` to `/api/auth/verify`
 7. Server verifies signature → returns Discord ID from token payload (unforgeable)
 
+### Middleware
+- `requireStaff` — vérifie JWT + requête DB pour rôle `staff`
+- Admin check — compare `discord_id` avec `ADMIN_DISCORD_ID` hardcodé
+
 ### Environment Variables / Secrets
 - `DISCORD_CLIENT_ID` — Discord app OAuth client ID
 - `DISCORD_CLIENT_SECRET` — Discord app OAuth client secret
 - `JWT_SECRET` — HS256 signing secret (shared env var, server-generated)
+- `DISCORD_BOT_TOKEN` — token du bot Discord VOID
 - `DATABASE_URL` — PostgreSQL connection string (Replit-managed)
 
 ### Key Files
 - `src/routes/discord-auth.ts` — Discord OAuth + JWT routes
+- `src/routes/staff.ts` — liste des membres (requireStaff)
+- `src/routes/bot.ts` — status + presence du bot (requireStaff)
+- `src/routes/admin.ts` — routes admin protégées
 - `src/routes/health.ts` — health check
+- `src/lib/bot.ts` — service discord.js (Client, BotInfo, startBot, getBotInfo, setBotPresence)
 
 ---
 

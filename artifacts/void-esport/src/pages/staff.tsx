@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Users, Bot, ShieldCheck,
   Crown, Crosshair, UserCheck, ExternalLink,
-  Loader2, ChevronRight, Wifi, WifiOff, Radio, Save,
+  Loader2, ChevronRight, Wifi, WifiOff, Radio, Save, Clock,
 } from "lucide-react";
 import { SiDiscord, SiTwitch } from "react-icons/si";
 import { Link, useLocation } from "wouter";
@@ -220,6 +220,32 @@ function ListeStaff({ token }: { token: string }) {
   );
 }
 
+// ─── Uptime ticker ───────────────────────────────────────────────────────────
+function Uptime({ connectedAt }: { connectedAt: string }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const start = new Date(connectedAt).getTime();
+    const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [connectedAt]);
+
+  const h = Math.floor(elapsed / 3600);
+  const m = Math.floor((elapsed % 3600) / 60);
+  const s = elapsed % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const label = h > 0 ? `${h}h ${pad(m)}m ${pad(s)}s` : `${pad(m)}m ${pad(s)}s`;
+
+  return (
+    <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground/50 font-mono mt-1">
+      <Clock className="w-3 h-3" />
+      En ligne depuis {label}
+    </p>
+  );
+}
+
 // ─── Bot ─────────────────────────────────────────────────────────────────────
 type BotStatus = "online" | "idle" | "dnd" | "invisible";
 type ActivityKind = "none" | "playing" | "listening" | "watching" | "streaming" | "competing";
@@ -227,8 +253,10 @@ type ActivityKind = "none" | "playing" | "listening" | "watching" | "streaming" 
 interface BotInfo {
   connected: boolean;
   username: string | null;
+  discriminator: string | null;
   avatar: string | null;
   id: string | null;
+  connectedAt: string | null;
   presence: {
     status: BotStatus;
     activityKind: ActivityKind;
@@ -310,15 +338,30 @@ function BotPage({ token }: { token: string }) {
       {loading ? (
         <div className="flex items-center gap-2 text-muted-foreground/50 text-sm"><Loader2 className="w-4 h-4 animate-spin" />Connexion…</div>
       ) : (
-        <div className={`flex items-center gap-4 p-4 border ${info?.connected ? "border-green-500/20 bg-green-500/5" : "border-red-500/20 bg-red-500/5"}`}>
-          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${info?.connected ? "bg-green-500/10" : "bg-red-500/10"}`}>
-            {info?.connected ? <Wifi className="w-5 h-5 text-green-400" /> : <WifiOff className="w-5 h-5 text-red-400" />}
-          </div>
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <span className={`font-orbitron font-bold text-sm uppercase tracking-wider ${info?.connected ? "text-green-400" : "text-red-400"}`}>
-                {info?.connected ? "Connecté" : "Déconnecté"}
-              </span>
+        <div className={`flex items-start gap-4 p-4 border ${info?.connected ? "border-green-500/20 bg-green-500/5" : "border-red-500/20 bg-red-500/5"}`}>
+          {/* Avatar */}
+          {info?.connected && info.id && info.avatar ? (
+            <img
+              src={`https://cdn.discordapp.com/avatars/${info.id}/${info.avatar}.png?size=80`}
+              alt={info.username ?? "bot"}
+              className="w-14 h-14 rounded-full shrink-0 border-2 border-white/10"
+            />
+          ) : (
+            <div className={`w-14 h-14 rounded-full flex items-center justify-center shrink-0 ${info?.connected ? "bg-green-500/10" : "bg-red-500/10"}`}>
+              {info?.connected ? <Wifi className="w-6 h-6 text-green-400" /> : <WifiOff className="w-6 h-6 text-red-400" />}
+            </div>
+          )}
+
+          <div className="flex-1 min-w-0">
+            {/* Name + status badge */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {info?.connected && info.username ? (
+                <span className="font-orbitron font-black text-sm text-white tracking-wide">{info.username}</span>
+              ) : (
+                <span className={`font-orbitron font-bold text-sm uppercase tracking-wider ${info?.connected ? "text-green-400" : "text-red-400"}`}>
+                  {info?.connected ? "Connecté" : "Déconnecté"}
+                </span>
+              )}
               {info?.connected && currentStatusCfg && (
                 <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                   <span className={`w-2 h-2 rounded-full ${currentStatusCfg.dot}`} />
@@ -326,10 +369,17 @@ function BotPage({ token }: { token: string }) {
                 </span>
               )}
             </div>
-            {info?.connected && info.username && (
-              <p className="text-xs text-muted-foreground/60 font-mono mt-0.5">
-                {info.username} · {info.id}
+
+            {/* ID */}
+            {info?.connected && info.id && (
+              <p className="text-[11px] text-muted-foreground/50 font-mono mt-0.5 truncate">
+                ID : {info.id}
               </p>
+            )}
+
+            {/* Uptime */}
+            {info?.connected && info.connectedAt && (
+              <Uptime connectedAt={info.connectedAt} />
             )}
           </div>
         </div>
