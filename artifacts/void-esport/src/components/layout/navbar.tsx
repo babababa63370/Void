@@ -71,7 +71,7 @@ export default function Navbar() {
           {/* Staff button — only visible to staff members */}
           {isStaff && (
             <Link
-              href="/meonix"
+              href="/staff"
               className="inline-flex items-center gap-1.5 text-sm font-medium text-cyan-400 hover:text-cyan-300 border border-cyan-500/30 hover:border-cyan-400/50 bg-cyan-500/10 hover:bg-cyan-500/15 px-3 py-2 transition-colors font-orbitron tracking-wider uppercase"
             >
               <ShieldCheck className="w-4 h-4" />
@@ -179,7 +179,7 @@ export default function Navbar() {
                   transition={{ delay: navItems.length * 0.05 + 0.05 }}
                 >
                   <Link
-                    href="/meonix"
+                    href="/staff"
                     className="flex items-center gap-2 w-full px-4 py-3.5 text-base font-medium text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-colors tracking-wider uppercase border-b border-white/5"
                     onClick={() => setIsOpen(false)}
                   >
