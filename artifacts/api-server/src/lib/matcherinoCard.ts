@@ -44,8 +44,9 @@ function wrapTitle(text: string): [string, string | null] {
 
 function formatDate(iso: string): string {
   const d = new Date(iso);
-  const date = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
-  const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  const tz = "Europe/Paris";
+  const date = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric", timeZone: tz });
+  const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", timeZone: tz });
   return `${date} à ${time}`;
 }
 
@@ -91,8 +92,8 @@ export async function generateMatcherinoCard(event: CardEvent): Promise<Buffer> 
 
   const gameTagWidth = game ? game.length * 8.5 + 26 : 0;
   const gameTag = game
-    ? `<rect x="80" y="305" width="${gameTagWidth}" height="30" fill="#8b5cf618" stroke="#8b5cf640" stroke-width="1" rx="2"/>
-       <text x="93" y="325" font-family="monospace" font-size="12" fill="#8b5cf6" letter-spacing="3">${escapeXml(game.toUpperCase())}</text>`
+    ? `<rect x="80" y="305" width="${gameTagWidth}" height="30" fill="#1a0f2e" stroke="#8b5cf6" stroke-width="1.5" rx="2"/>
+       <text x="93" y="325" font-family="monospace" font-size="12" fill="#c4b5fd" letter-spacing="3">${escapeXml(game.toUpperCase())}</text>`
     : "";
 
   const svg = `
