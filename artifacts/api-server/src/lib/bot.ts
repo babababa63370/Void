@@ -1,4 +1,5 @@
-import { Client, GatewayIntentBits, ActivityType, type PresenceStatusData, EmbedBuilder, TextChannel } from "discord.js";
+import { Client, GatewayIntentBits, ActivityType, type PresenceStatusData, TextChannel, AttachmentBuilder } from "discord.js";
+import { generateMatcherinoCard } from "./matcherinoCard";
 
 export type BotStatus = "online" | "idle" | "dnd" | "invisible";
 export type ActivityKind = "none" | "playing" | "listening" | "watching" | "streaming" | "competing";
@@ -91,31 +92,15 @@ export async function sendMatcherinoAnnouncement(
   const channel = await client.channels.fetch(channelId);
   if (!channel || !(channel instanceof TextChannel)) throw new Error("Channel not found or not a text channel");
 
-  const formatDate = (iso: string) =>
-    new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const imageBuffer = await generateMatcherinoCard(event);
+  const filename = `tournament-${event.id}${event.isTest ? "-test" : ""}.png`;
+  const attachment = new AttachmentBuilder(imageBuffer, { name: filename });
 
-  const embed = new EmbedBuilder()
-    .setColor(0x8b5cf6)
-    .setTitle((event.isTest ? "🧪 [TEST] " : "🏆 ") + event.title)
-    .setURL(`https://matcherino.com/tournaments/${event.id}`)
-    .setDescription(
-      `**Tournoi #${event.id}** · ${event.gameTitle ?? "Brawl Stars"}\n\n` +
-      (event.isTest ? "*Ceci est un message de test — ignore it.*\n" : ""),
-    )
-    .addFields(
-      { name: "📅 Début", value: event.startAt ? formatDate(event.startAt) : "À définir", inline: true },
-      { name: "🏁 Fin", value: event.endAt ? formatDate(event.endAt) : "—", inline: true },
-      { name: "👥 Participants", value: String(event.participantsCount), inline: true },
-      ...(event.totalBalance > 0
-        ? [{ name: "💰 Prize Pool", value: `$${event.totalBalance}`, inline: true }]
-        : []),
-    )
-    .setFooter({ text: "VOID Esport · Matcherino" })
-    .setTimestamp();
+  const caption = event.isTest
+    ? `🧪 **[TEST]** — Voici un aperçu de la carte pour **${event.title}**`
+    : `🏆 **Nouveau tournoi VOID !** → <https://matcherino.com/tournaments/${event.id}>`;
 
-  if (event.heroImg) embed.setImage(event.heroImg);
-
-  await channel.send({ embeds: [embed] });
+  await channel.send({ content: caption, files: [attachment] });
 }
 
 export async function setBotPresence(presence: BotPresence): Promise<void> {
