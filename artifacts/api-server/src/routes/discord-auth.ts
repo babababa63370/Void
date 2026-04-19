@@ -135,7 +135,7 @@ router.get("/auth/discord/url", (req, res) => {
   res.json({ url: url.toString() });
 });
 
-// GET /api/auth/verify — validates the JWT, returns the Discord ID
+// GET /api/auth/verify — validates the JWT, returns the Discord ID + roles
 router.get("/auth/verify", async (req, res) => {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
@@ -147,10 +147,16 @@ router.get("/auth/verify", async (req, res) => {
 
   try {
     const { payload } = await jwtVerify(token, getJwtSecret());
+    const discordId = payload.sub as string;
+
+    const rows = await db.select().from(playerLoginsTable).where(eq(playerLoginsTable.discordId, discordId));
+    const roles: string[] = rows[0]?.roles ?? [];
+
     res.json({
-      discordId: payload.sub,
+      discordId,
       username: payload.username,
       avatar: payload.avatar,
+      roles,
     });
   } catch {
     res.status(401).json({ error: "invalid_token" });

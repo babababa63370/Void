@@ -1,14 +1,17 @@
 import { Link } from "wouter";
 import { SiDiscord } from "react-icons/si";
-import { Menu, X, Globe, ChevronDown } from "lucide-react";
+import { Menu, X, Globe, ChevronDown, ShieldCheck } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import logoPath from "@assets/purple_black_emblem_without_void_c4a1470f_1776350974040.png";
 import matcherinoIconPath from "@assets/matcherino-icon.png";
 import { useI18n, SUPPORTED_LANGS, LANG_NAMES, LANG_FLAGS, type Lang } from "@/i18n/context";
+import { useSession } from "@/hooks/useSession";
 
 export default function Navbar() {
   const { t, lang, switchLang } = useI18n();
+  const { session } = useSession();
+  const isStaff = session?.roles?.includes("staff") ?? false;
   const [isOpen, setIsOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
@@ -65,6 +68,17 @@ export default function Navbar() {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
+          {/* Staff button — only visible to staff members */}
+          {isStaff && (
+            <Link
+              href="/meonix"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-cyan-400 hover:text-cyan-300 border border-cyan-500/30 hover:border-cyan-400/50 bg-cyan-500/10 hover:bg-cyan-500/15 px-3 py-2 transition-colors font-orbitron tracking-wider uppercase"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Staff
+            </Link>
+          )}
+
           {/* Language Switcher */}
           <div className="relative" ref={langRef}>
             <button
@@ -156,6 +170,24 @@ export default function Navbar() {
                   </Link>
                 </motion.div>
               ))}
+
+              {/* Mobile Staff button */}
+              {isStaff && (
+                <motion.div
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: navItems.length * 0.05 + 0.05 }}
+                >
+                  <Link
+                    href="/meonix"
+                    className="flex items-center gap-2 w-full px-4 py-3.5 text-base font-medium text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 transition-colors tracking-wider uppercase border-b border-white/5"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <ShieldCheck className="w-5 h-5" />
+                    Staff
+                  </Link>
+                </motion.div>
+              )}
 
               {/* Mobile language switcher */}
               <div className="pt-4 mt-2">
