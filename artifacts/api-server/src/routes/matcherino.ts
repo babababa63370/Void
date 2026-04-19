@@ -1,6 +1,29 @@
 import { Router } from "express";
 import { eq } from "drizzle-orm";
 import { db, matcherinoEventsTable } from "@workspace/db";
+import { jwtVerify } from "jose";
+import { sql } from "drizzle-orm";
+import { db as dbPlayers, playerLoginsTable } from "@workspace/db";
+import { sendMatcherinoAnnouncement } from "../lib/bot";
+
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error("JWT_SECRET is not set");
+  return new TextEncoder().encode(secret);
+}
+
+async function requireStaff(req: import("express").Request, res: import("express").Response): Promise<string | null> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith("Bearer ")) { res.status(401).json({ error: "no_token" }); return null; }
+  try {
+    const { payload } = await jwtVerify(authHeader.slice(7), getJwtSecret());
+    const discordId = payload.sub as string;
+    const rows = await dbPlayers.select().from(playerLoginsTable).where(sql`${playerLoginsTable.discordId} = ${discordId}`);
+    const roles: string[] = rows[0]?.roles ?? [];
+    if (!roles.includes("staff")) { res.status(403).json({ error: "forbidden" }); return null; }
+    return discordId;
+  } catch { res.status(401).json({ error: "invalid_token" }); return null; }
+}
 
 const router = Router();
 
@@ -184,6 +207,34 @@ router.post("/matcherino/events/refresh", async (_req, res) => {
     res.json({ events });
   } catch (err) {
     res.status(500).json({ error: "Failed to refresh events" });
+  }
+});
+
+router.post("/staff/matcherino/announce", async (req, res) => {
+  const requesterId = await requireStaff(req, res);
+  if (!requesterId) return;
+
+  const { eventId, channelId, isTest } = req.body as { eventId: number; channelId: string; isTest?: boolean };
+  if (!eventId || !channelId) return res.status(400).json({ error: "eventId and channelId are required" });
+
+  const [event] = await db.select().from(matcherinoEventsTable).where(eq(matcherinoEventsTable.id, eventId));
+  if (!event) return res.status(404).json({ error: "Event not found" });
+
+  try {
+    await sendMatcherinoAnnouncement(channelId, {
+      id: event.id,
+      title: event.title,
+      gameTitle: event.gameTitle,
+      heroImg: event.heroImg || event.backgroundImg || "",
+      startAt: event.startAt?.toISOString() ?? null,
+      endAt: event.endAt?.toISOString() ?? null,
+      participantsCount: event.participantsCount,
+      totalBalance: event.totalBalance,
+      isTest: isTest ?? false,
+    });
+    res.json({ success: true });
+  } catch (err: any) {
+    res.status(500).json({ error: err?.message ?? "Failed to send announcement" });
   }
 });
 

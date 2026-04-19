@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Users, Bot, ShieldCheck,
   Crown, Crosshair, UserCheck, ExternalLink,
   Loader2, ChevronRight, Wifi, WifiOff, Radio, Save, Clock,
+  Trophy, Calendar, FlaskConical, Send, RefreshCw, Hash, ToggleLeft, ToggleRight, CheckCircle2, AlertCircle,
 } from "lucide-react";
 import { SiDiscord, SiTwitch } from "react-icons/si";
 import { Link, useLocation } from "wouter";
@@ -38,6 +39,7 @@ const NAV_GROUPS = [
     category: "Bot Panel",
     items: [
       { path: "/staff/bot", label: "Overview", icon: LayoutDashboard, category: "Bot Panel" },
+      { path: "/staff/matcherino", label: "Matcherino", icon: Trophy, category: "Bot Panel" },
     ],
   },
 ];
@@ -564,6 +566,302 @@ function BotPage({ token }: { token: string }) {
   );
 }
 
+// ─── Matcherino ───────────────────────────────────────────────────────────────
+interface MEvent {
+  id: number;
+  title: string;
+  kind: string;
+  startAt: string | null;
+  endAt: string | null;
+  totalBalance: number;
+  participantsCount: number;
+  heroImg: string;
+  backgroundImg: string;
+  thumbnailImg: string;
+  gameTitle: string | null;
+  gameImage: string | null;
+}
+
+function formatEventDate(iso: string) {
+  return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+function MatcherinoPage({ token }: { token: string }) {
+  const baseUrl = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+
+  const [events, setEvents] = useState<MEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [channelId, setChannelId] = useState("");
+  const [announced, setAnnounced] = useState<Record<number, boolean>>({});
+  const [sending, setSending] = useState<Record<number, boolean>>({});
+  const [feedback, setFeedback] = useState<Record<number, "ok" | "err">>({});
+
+  const loadEvents = useCallback((fresh = false) => {
+    if (fresh) setRefreshing(true);
+    else setLoading(true);
+    const url = fresh
+      ? `${baseUrl}/api/matcherino/events/refresh`
+      : `${baseUrl}/api/matcherino/events`;
+    fetch(url, { method: fresh ? "POST" : "GET" })
+      .then((r) => r.json())
+      .then((d: { events: MEvent[] }) => setEvents(d.events ?? []))
+      .catch(() => {})
+      .finally(() => { setLoading(false); setRefreshing(false); });
+  }, [baseUrl]);
+
+  useEffect(() => { loadEvents(); }, [loadEvents]);
+
+  async function announce(eventId: number, isTest: boolean) {
+    if (!channelId.trim()) return;
+    setSending((p) => ({ ...p, [eventId]: true }));
+    setFeedback((p) => { const n = { ...p }; delete n[eventId]; return n; });
+    try {
+      const r = await fetch(`${baseUrl}/api/staff/matcherino/announce`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ eventId, channelId: channelId.trim(), isTest }),
+      });
+      if (r.ok) {
+        if (!isTest) setAnnounced((p) => ({ ...p, [eventId]: true }));
+        setFeedback((p) => ({ ...p, [eventId]: "ok" }));
+      } else {
+        setFeedback((p) => ({ ...p, [eventId]: "err" }));
+      }
+    } catch {
+      setFeedback((p) => ({ ...p, [eventId]: "err" }));
+    } finally {
+      setSending((p) => ({ ...p, [eventId]: false }));
+      setTimeout(() => setFeedback((p) => { const n = { ...p }; delete n[eventId]; return n; }), 3000);
+    }
+  }
+
+  function toggleAnnounced(eventId: number) {
+    setAnnounced((p) => ({ ...p, [eventId]: !p[eventId] }));
+  }
+
+  const now = new Date();
+  const active = events.filter((e) => !e.endAt || new Date(e.endAt) > now);
+  const finished = events.filter((e) => e.endAt && new Date(e.endAt) <= now);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h2 className="font-orbitron font-black text-lg uppercase tracking-widest text-white mb-1">Matcherino</h2>
+          <p className="text-xs text-muted-foreground">Annonces de tournois vers Discord</p>
+        </div>
+        <button
+          onClick={() => loadEvents(true)}
+          disabled={refreshing || loading}
+          className="flex items-center gap-2 px-3 py-2 border border-white/10 bg-white/[0.03] hover:bg-white/[0.06] text-xs font-orbitron uppercase tracking-wider text-muted-foreground hover:text-white transition-colors disabled:opacity-40"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? "animate-spin" : ""}`} />
+          Sync Matcherino
+        </button>
+      </div>
+
+      {/* Channel ID input */}
+      <div className="p-4 border border-violet-500/20 bg-violet-500/5 space-y-3">
+        <p className="text-[11px] font-orbitron text-violet-400/70 uppercase tracking-widest">Canal Discord cible</p>
+        <div className="flex items-center gap-2 border border-white/10 bg-white/[0.03] px-3 py-2.5">
+          <Hash className="w-4 h-4 text-violet-400/60 shrink-0" />
+          <input
+            type="text"
+            value={channelId}
+            onChange={(e) => setChannelId(e.target.value)}
+            placeholder="ID du canal Discord (ex: 1234567890123456789)"
+            className="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder:text-muted-foreground/30 font-mono"
+          />
+        </div>
+        <p className="text-[10px] text-muted-foreground/40 font-mono">
+          Clic droit sur le canal Discord → Copier l'identifiant (mode développeur requis)
+        </p>
+      </div>
+
+      {loading ? (
+        <div className="flex items-center gap-2 text-muted-foreground/50 text-sm">
+          <Loader2 className="w-4 h-4 animate-spin" />Chargement des événements…
+        </div>
+      ) : events.length === 0 ? (
+        <p className="text-muted-foreground/40 text-sm font-mono">Aucun événement Matcherino trouvé.</p>
+      ) : (
+        <div className="space-y-6">
+          {/* Active events */}
+          {active.length > 0 && (
+            <div>
+              <p className="text-[11px] font-orbitron text-primary/60 uppercase tracking-widest mb-3">
+                En cours / à venir ({active.length})
+              </p>
+              <div className="grid gap-3">
+                {active.map((event, i) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    i={i}
+                    announced={!!announced[event.id]}
+                    sending={!!sending[event.id]}
+                    feedback={feedback[event.id]}
+                    channelId={channelId}
+                    onToggle={() => toggleAnnounced(event.id)}
+                    onAnnounce={() => announce(event.id, false)}
+                    onTest={() => announce(event.id, true)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Finished events */}
+          {finished.length > 0 && (
+            <div>
+              <p className="text-[11px] font-orbitron text-muted-foreground/30 uppercase tracking-widest mb-3">
+                Terminés ({finished.length})
+              </p>
+              <div className="grid gap-3 opacity-60">
+                {finished.map((event, i) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    i={i}
+                    announced={!!announced[event.id]}
+                    sending={!!sending[event.id]}
+                    feedback={feedback[event.id]}
+                    channelId={channelId}
+                    onToggle={() => toggleAnnounced(event.id)}
+                    onAnnounce={() => announce(event.id, false)}
+                    onTest={() => announce(event.id, true)}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+function EventCard({
+  event, i, announced, sending, feedback, channelId, onToggle, onAnnounce, onTest,
+}: {
+  event: MEvent;
+  i: number;
+  announced: boolean;
+  sending: boolean;
+  feedback?: "ok" | "err";
+  channelId: string;
+  onToggle: () => void;
+  onAnnounce: () => void;
+  onTest: () => void;
+}) {
+  const cover = event.heroImg || event.backgroundImg || event.thumbnailImg;
+  const noChannel = !channelId.trim();
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay: i * 0.04 }}
+      className={`border transition-colors ${announced ? "border-primary/30 bg-primary/5" : "border-white/5 bg-white/[0.02]"}`}
+    >
+      <div className="flex gap-0 overflow-hidden">
+        {/* Tournament image */}
+        {cover ? (
+          <div className="w-24 h-24 shrink-0 overflow-hidden relative">
+            <img src={cover} alt={event.title} className="w-full h-full object-cover opacity-80" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent to-background/60" />
+          </div>
+        ) : (
+          <div className="w-24 h-24 shrink-0 flex items-center justify-center bg-primary/5 border-r border-white/5">
+            <Trophy className="w-7 h-7 text-primary/30" />
+          </div>
+        )}
+
+        {/* Info */}
+        <div className="flex-1 min-w-0 p-3 flex flex-col justify-between">
+          <div>
+            <div className="flex items-start gap-2 flex-wrap">
+              <h3 className="font-orbitron font-bold text-sm uppercase tracking-wider text-white leading-tight line-clamp-1 flex-1">
+                {event.title}
+              </h3>
+              <span className="text-[10px] font-mono text-muted-foreground/30 shrink-0">#{event.id}</span>
+            </div>
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
+              {event.gameTitle && (
+                <span className="text-[10px] font-orbitron uppercase tracking-wider text-primary/70 border border-primary/20 px-1.5 py-0.5">
+                  {event.gameTitle}
+                </span>
+              )}
+              {event.startAt && (
+                <span className="flex items-center gap-1 text-[11px] text-muted-foreground/50">
+                  <Calendar className="w-3 h-3" />
+                  {formatEventDate(event.startAt)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 mt-2 flex-wrap">
+            {/* Toggle */}
+            <button
+              onClick={onToggle}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 border text-[10px] font-orbitron uppercase tracking-wider transition-colors ${
+                announced
+                  ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
+                  : "border-white/10 bg-white/[0.02] text-muted-foreground/50 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              {announced
+                ? <><ToggleRight className="w-3.5 h-3.5" /> Actif</>
+                : <><ToggleLeft className="w-3.5 h-3.5" /> Inactif</>}
+            </button>
+
+            {/* Test */}
+            <button
+              onClick={onTest}
+              disabled={sending || noChannel}
+              title={noChannel ? "Saisir un ID de canal d'abord" : "Envoyer un embed de test"}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 border border-yellow-500/30 bg-yellow-500/5 text-yellow-400/70 hover:text-yellow-400 hover:bg-yellow-500/10 text-[10px] font-orbitron uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <FlaskConical className="w-3 h-3" />}
+              Test
+            </button>
+
+            {/* Announce */}
+            <button
+              onClick={onAnnounce}
+              disabled={sending || noChannel}
+              title={noChannel ? "Saisir un ID de canal d'abord" : "Envoyer l'annonce dans Discord"}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 text-[10px] font-orbitron uppercase tracking-wider transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {sending ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+              Annoncer
+            </button>
+
+            {/* Feedback */}
+            <AnimatePresence>
+              {feedback && (
+                <motion.span
+                  initial={{ opacity: 0, x: 4 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0 }}
+                  className={`flex items-center gap-1 text-[10px] font-orbitron uppercase tracking-wider ${feedback === "ok" ? "text-green-400" : "text-red-400"}`}
+                >
+                  {feedback === "ok"
+                    ? <><CheckCircle2 className="w-3 h-3" /> Envoyé</>
+                    : <><AlertCircle className="w-3 h-3" /> Erreur</>}
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ─── Layout + Router ──────────────────────────────────────────────────────────
 export default function Staff() {
   usePageMeta({ title: "Espace Staff — VOID Esport", description: "Zone réservée au staff VOID Esport" });
@@ -588,6 +886,7 @@ export default function Staff() {
 
   function renderSection() {
     if (location.startsWith("/staff/liste-staff")) return <ListeStaff token={session!.token} />;
+    if (location.startsWith("/staff/matcherino")) return <MatcherinoPage token={session!.token} />;
     if (location.startsWith("/staff/bot")) return <BotPage token={session!.token} />;
     return <Overview session={session!} isAdmin={isAdmin} />;
   }
