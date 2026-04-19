@@ -29,7 +29,7 @@ const ROLE_CONFIG = {
 const NAV_ITEMS = [
   { path: "/staff", label: "Overview", icon: LayoutDashboard },
   { path: "/staff/liste-staff", label: "Liste staff", icon: Users },
-  { path: "/staff/bot", label: "Bot", icon: Bot },
+  { path: "/staff/bot", label: "Bot Panel", icon: Bot },
 ];
 
 // ─── Overview ────────────────────────────────────────────────────────────────
@@ -212,7 +212,7 @@ function BotPage() {
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div>
-        <h2 className="font-orbitron font-black text-lg uppercase tracking-widest text-white mb-1">Bot</h2>
+        <h2 className="font-orbitron font-black text-lg uppercase tracking-widest text-white mb-1">Bot Panel</h2>
         <p className="text-xs text-muted-foreground">Gestion du bot Discord VOID</p>
       </div>
       <div className="p-8 border border-white/5 bg-white/[0.02] flex flex-col items-center justify-center gap-3 text-center">
