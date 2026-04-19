@@ -40,7 +40,7 @@ export default function Footer() {
               <a href="#" className="w-10 h-10 rounded-none clip-path-button bg-card flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-white/5 transition-all">
                 <SiYoutube className="w-4 h-4" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-none clip-path-button bg-card flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-white/5 transition-all">
+              <a href="https://www.tiktok.com/@bsvoid_official" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-none clip-path-button bg-card flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-white/5 transition-all">
                 <SiTiktok className="w-4 h-4" />
               </a>
               <a href="https://www.twitch.tv/bsvoidesport" target="_blank" rel="noopener noreferrer" className="w-10 h-10 rounded-none clip-path-button bg-card flex items-center justify-center text-muted-foreground hover:text-primary hover:bg-white/5 transition-all">
