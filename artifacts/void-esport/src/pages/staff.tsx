@@ -142,7 +142,7 @@ function ListeStaff({ token }: { token: string }) {
     fetch("/api/admin/players", { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
       .then((data: StaffMember[]) => {
-        setMembers(data.filter((p) => p.roles.includes("staff")));
+        setMembers(data.filter((p) => p.roles.length > 0));
       })
       .catch(() => setMembers([]))
       .finally(() => setLoading(false));
@@ -186,10 +186,19 @@ function ListeStaff({ token }: { token: string }) {
                   <span className="text-[11px] font-mono text-muted-foreground/40 truncate">{m.discordId}</span>
                 </div>
               </div>
-              <span className="inline-flex items-center gap-1 px-2 py-1 border border-cyan-500/30 bg-cyan-500/10 text-cyan-400 text-[10px] font-orbitron uppercase tracking-wider shrink-0">
-                <UserCheck className="w-3 h-3" />
-                Staff
-              </span>
+              <div className="flex flex-wrap gap-1 shrink-0">
+                {m.roles.map((role) => {
+                  const cfg = ROLE_CONFIG[role as keyof typeof ROLE_CONFIG];
+                  if (!cfg) return null;
+                  const Icon = cfg.icon;
+                  return (
+                    <span key={role} className={`inline-flex items-center gap-1 px-2 py-1 border text-[10px] font-orbitron uppercase tracking-wider ${cfg.color} ${cfg.bg}`}>
+                      <Icon className="w-3 h-3" />
+                      {cfg.label}
+                    </span>
+                  );
+                })}
+              </div>
             </motion.div>
           ))}
         </div>
