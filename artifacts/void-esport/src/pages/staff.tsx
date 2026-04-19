@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard, Users, Bot, ShieldCheck,
   Crown, Crosshair, UserCheck, ExternalLink,
-  Loader2, ChevronRight,
+  Loader2, ChevronRight, Wifi, WifiOff, Radio, Save,
 } from "lucide-react";
-import { SiDiscord } from "react-icons/si";
+import { SiDiscord, SiTwitch } from "react-icons/si";
 import { Link, useLocation } from "wouter";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useSession } from "@/hooks/useSession";
@@ -221,18 +221,197 @@ function ListeStaff({ token }: { token: string }) {
 }
 
 // ─── Bot ─────────────────────────────────────────────────────────────────────
-function BotPage() {
+type BotStatus = "online" | "idle" | "dnd" | "invisible";
+type ActivityKind = "none" | "playing" | "listening" | "watching" | "streaming" | "competing";
+
+interface BotInfo {
+  connected: boolean;
+  username: string | null;
+  avatar: string | null;
+  id: string | null;
+  presence: {
+    status: BotStatus;
+    activityKind: ActivityKind;
+    activityName: string;
+    streamUrl: string;
+  };
+}
+
+const STATUS_OPTIONS: { value: BotStatus; label: string; color: string; dot: string }[] = [
+  { value: "online",    label: "En ligne",    color: "text-green-400",  dot: "bg-green-400" },
+  { value: "idle",      label: "Absent",      color: "text-yellow-400", dot: "bg-yellow-400" },
+  { value: "dnd",       label: "Ne pas déranger", color: "text-red-400", dot: "bg-red-400" },
+  { value: "invisible", label: "Invisible",   color: "text-gray-400",   dot: "bg-gray-400" },
+];
+
+const ACTIVITY_OPTIONS: { value: ActivityKind; label: string }[] = [
+  { value: "none",       label: "Aucune activité" },
+  { value: "playing",    label: "Joue à…" },
+  { value: "listening",  label: "Écoute…" },
+  { value: "watching",   label: "Regarde…" },
+  { value: "streaming",  label: "Streaming…" },
+  { value: "competing",  label: "En compétition dans…" },
+];
+
+function BotPage({ token }: { token: string }) {
+  const [info, setInfo] = useState<BotInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const [status, setStatus] = useState<BotStatus>("online");
+  const [activityKind, setActivityKind] = useState<ActivityKind>("none");
+  const [activityName, setActivityName] = useState("");
+  const [streamUrl, setStreamUrl] = useState("");
+
+  const fetchStatus = useCallback(() => {
+    fetch("/api/bot/status", { headers: { Authorization: `Bearer ${token}` } })
+      .then((r) => r.json())
+      .then((data: BotInfo) => {
+        setInfo(data);
+        setStatus(data.presence.status);
+        setActivityKind(data.presence.activityKind);
+        setActivityName(data.presence.activityName);
+        setStreamUrl(data.presence.streamUrl);
+      })
+      .catch(() => setInfo(null))
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  useEffect(() => { fetchStatus(); }, [fetchStatus]);
+
+  async function handleSave() {
+    setSaving(true);
+    setSaved(false);
+    try {
+      await fetch("/api/bot/presence", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status, activityKind, activityName, streamUrl }),
+      });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+      fetchStatus();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  const currentStatusCfg = STATUS_OPTIONS.find((s) => s.value === (info?.presence.status ?? status));
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
       <div>
         <h2 className="font-orbitron font-black text-lg uppercase tracking-widest text-white mb-1">Bot Panel</h2>
         <p className="text-xs text-muted-foreground">Gestion du bot Discord VOID</p>
       </div>
-      <div className="p-8 border border-white/5 bg-white/[0.02] flex flex-col items-center justify-center gap-3 text-center">
-        <Bot className="w-10 h-10 text-muted-foreground/20" />
-        <p className="font-orbitron text-sm uppercase tracking-wider text-muted-foreground/40">Bientôt disponible</p>
-        <p className="text-xs text-muted-foreground/30">Cette section est en cours de développement.</p>
-      </div>
+
+      {/* Connection status */}
+      {loading ? (
+        <div className="flex items-center gap-2 text-muted-foreground/50 text-sm"><Loader2 className="w-4 h-4 animate-spin" />Connexion…</div>
+      ) : (
+        <div className={`flex items-center gap-4 p-4 border ${info?.connected ? "border-green-500/20 bg-green-500/5" : "border-red-500/20 bg-red-500/5"}`}>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${info?.connected ? "bg-green-500/10" : "bg-red-500/10"}`}>
+            {info?.connected ? <Wifi className="w-5 h-5 text-green-400" /> : <WifiOff className="w-5 h-5 text-red-400" />}
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <span className={`font-orbitron font-bold text-sm uppercase tracking-wider ${info?.connected ? "text-green-400" : "text-red-400"}`}>
+                {info?.connected ? "Connecté" : "Déconnecté"}
+              </span>
+              {info?.connected && currentStatusCfg && (
+                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <span className={`w-2 h-2 rounded-full ${currentStatusCfg.dot}`} />
+                  {currentStatusCfg.label}
+                </span>
+              )}
+            </div>
+            {info?.connected && info.username && (
+              <p className="text-xs text-muted-foreground/60 font-mono mt-0.5">
+                {info.username} · {info.id}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Presence controls */}
+      {info?.connected && (
+        <div className="space-y-5">
+          {/* Status */}
+          <div>
+            <p className="text-[11px] font-orbitron text-muted-foreground/40 uppercase tracking-widest mb-3">Statut</p>
+            <div className="grid grid-cols-2 gap-2">
+              {STATUS_OPTIONS.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setStatus(opt.value)}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 border text-sm font-orbitron uppercase tracking-wider transition-colors ${
+                    status === opt.value
+                      ? "border-primary/50 bg-primary/10 text-primary"
+                      : "border-white/5 bg-white/[0.02] text-muted-foreground hover:bg-white/5"
+                  }`}
+                >
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${opt.dot}`} />
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Activity */}
+          <div>
+            <p className="text-[11px] font-orbitron text-muted-foreground/40 uppercase tracking-widest mb-3">Activité</p>
+            <div className="space-y-2">
+              <select
+                value={activityKind}
+                onChange={(e) => setActivityKind(e.target.value as ActivityKind)}
+                className="w-full bg-white/[0.03] border border-white/10 text-white text-sm font-orbitron uppercase tracking-wider px-3 py-2.5 focus:outline-none focus:border-primary/50"
+              >
+                {ACTIVITY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value} className="bg-[#0f0f13] normal-case">
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+
+              {activityKind !== "none" && (
+                <input
+                  type="text"
+                  value={activityName}
+                  onChange={(e) => setActivityName(e.target.value)}
+                  placeholder={activityKind === "streaming" ? "Nom du stream…" : "Texte de l'activité…"}
+                  className="w-full bg-white/[0.03] border border-white/10 text-white text-sm px-3 py-2.5 focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground/40"
+                />
+              )}
+
+              {activityKind === "streaming" && (
+                <div className="flex items-center gap-2 px-3 py-2.5 border border-violet-500/20 bg-violet-500/5">
+                  <SiTwitch className="w-4 h-4 text-violet-400 shrink-0" />
+                  <input
+                    type="text"
+                    value={streamUrl}
+                    onChange={(e) => setStreamUrl(e.target.value)}
+                    placeholder="https://twitch.tv/votrechaîne"
+                    className="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder:text-muted-foreground/40"
+                  />
+                  <Radio className="w-3.5 h-3.5 text-violet-400/50 shrink-0" />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Save */}
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-orbitron font-bold uppercase tracking-wider text-sm transition-colors disabled:opacity-50"
+          >
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saved ? "Sauvegardé !" : "Appliquer"}
+          </button>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -261,7 +440,7 @@ export default function Staff() {
 
   function renderSection() {
     if (location.startsWith("/staff/liste-staff")) return <ListeStaff token={session!.token} />;
-    if (location.startsWith("/staff/bot")) return <BotPage />;
+    if (location.startsWith("/staff/bot")) return <BotPage token={session!.token} />;
     return <Overview session={session!} isAdmin={isAdmin} />;
   }
 
