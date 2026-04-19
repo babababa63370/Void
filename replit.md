@@ -14,13 +14,16 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **Auth**: Discord OAuth2 + JWT (jose, HS256, 30 days)
-- **Build**: esbuild (CJS bundle)
+- **Build**: esbuild (ESM bundle via `build.mjs`)
+- **Image generation**: sharp (SVG → PNG pour les cartes Matcherino)
+- **Discord bot**: discord.js v14
 
 ## Key Commands
 
 - `pnpm run typecheck` — full typecheck across all packages
 - `pnpm run build` — typecheck + build all packages
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
+- `pnpm --filter @workspace/db run push` — push DB schema changes (interactive)
+- `pnpm --filter @workspace/db run push-force` — force push (destructive, skips prompts)
 - `pnpm --filter @workspace/api-server run dev` — run API server locally
 
 See the `pnpm-workspace` skill for workspace structure, TypeScript setup, and package details.
@@ -47,7 +50,7 @@ Competitive Brawl Stars esport clan site with cyberpunk/esports aesthetic.
 - `/privacy` — Privacy policy
 - `/achievements` — Palmarès / Legacy (page vide pour l'instant : "Rien encore pour l'instant")
 - `/players-login` — Player Portal (Discord OAuth login, noindex, hidden from nav)
-- `/staff` — Staff Panel (Discord OAuth requis + rôle `staff`), sous-routes : Overview / Liste staff / Bot Panel
+- `/staff` — Staff Panel (Discord OAuth requis + rôle `staff`), sous-routes : Overview / Liste staff / Bot Panel / Matcherino
 - `/meonix` — Zone restreinte accessible uniquement à l'ID Discord `1243206708604702791` (sinon 404)
 - `/*` — Animated 404 page
 
@@ -84,6 +87,7 @@ Competitive Brawl Stars esport clan site with cyberpunk/esports aesthetic.
 - `src/pages/players-login.tsx` — Discord OAuth login page (Player Portal)
 - `src/pages/roster-player.tsx` — Player profile page + edit panel
 - `src/pages/roster.tsx` — Roster page with PlayerCard (uses cardBackground)
+- `src/pages/staff.tsx` — Panel staff complet (Overview, Members, Bot, Matcherino)
 - `src/pages/meonix.tsx` — Protected page (server-side JWT verification)
 - `src/hooks/usePageMeta.ts` — Dynamic title/meta + glitch effect
 - `vite.config.ts` — Multi-page build config + dev routing middleware
@@ -93,50 +97,69 @@ Competitive Brawl Stars esport clan site with cyberpunk/esports aesthetic.
 
 ## API Server (`artifacts/api-server`)
 
-Express 5 server on port 8080, paths proxied at `/api`.
+Express 5 server sur le port 8080, chemins proxifiés via `/api`.
 
 ### Routes
 - `GET /api/healthz` — health check
 - `GET /api/auth/discord/url?redirectUri=...` — returns Discord OAuth authorization URL
 - `POST /api/auth/discord/exchange` — exchanges OAuth code for Discord user info + signed JWT
 - `GET /api/auth/verify` — validates JWT (Bearer token), returns Discord ID, user info + roles
-- `GET /api/brawl/player/:tag` — proxy vers l'API Brawl Stars pour récupérer les stats d'un joueur
-- `GET /api/staff/members` — liste des membres (staff uniquement) avec rôles colorés
-- `GET /api/bot/status` — infos du bot Discord (connecté, nom, avatar, ID, connectedAt, presence)
+- `GET /api/brawl/player/:tag` — proxy vers l'API Brawl Stars
+- `GET /api/staff/members` — liste des membres (staff uniquement)
+- `GET /api/bot/status` — infos du bot Discord
 - `PATCH /api/bot/presence` — met à jour statut + activité du bot (staff uniquement)
 - `GET /api/admin/*` — routes admin (ID Discord `1243206708604702791` uniquement)
+- `GET /api/matcherino/events` — liste des événements Matcherino (public)
+- `POST /api/matcherino/events/refresh` — sync depuis l'API Matcherino
+- `GET /api/staff/matcherino/preview/:id` — PNG de la carte pour un événement (staff)
+- `POST /api/staff/matcherino/announce` — envoie une carte sur Discord (staff)
+- `GET /api/staff/matcherino/auto-announce/status` — état de l'auto-announce (staff)
+- `POST /api/staff/matcherino/auto-announce/start` — démarre l'auto-announce (staff)
+- `POST /api/staff/matcherino/auto-announce/stop` — arrête l'auto-announce (staff)
+- `GET /api/staff/matcherino/settings` — lit les paramètres depuis la DB (staff)
+- `POST /api/staff/matcherino/settings` — sauvegarde un paramètre en DB (staff)
 
-### Brawl Stars API
-- La route `/api/brawl/player/:tag` appelle actuellement `api.brawlapi.com/v1/players/:tag` sans token (affiche "Profil introuvable" car cette API requiert une auth)
-- **TODO** : remplacer par l'API perso du propriétaire — ajouter l'URL et le token/secret via un secret Replit (`BRAWL_API_URL` et/ou `BRAWL_API_KEY`) puis mettre à jour `artifacts/api-server/src/routes/brawl.ts`
+### Matcherino Card
+- Générée par `src/lib/matcherinoCard.ts` via sharp (SVG → PNG 1200×630)
+- Style cyberpunk : fond sombre `#0a0a0e`, accent violet `#8b5cf6`, grille, dégradé latéral
+- Dates affichées en heure de Paris (`Europe/Paris`)
+- Ping automatique du rôle `1495421946832359504` lors des annonces auto
+
+### Auto-announce
+- Service `src/lib/autoAnnounce.ts` : polling toutes les 5 min sur l'API Matcherino
+- Détecte les nouveaux tournois du créateur `2423612` et les annonce automatiquement
+- État (channelId, enabled) persisté en DB dans la table `settings`
+- Se réactive automatiquement au redémarrage du serveur si `matcherino.autoAnnounce = true`
 
 ### Auth Flow
-1. Frontend calls `/api/auth/discord/url` → gets OAuth URL with `client_id` from env
+1. Frontend calls `/api/auth/discord/url` → gets OAuth URL
 2. User authorizes on Discord → redirected to `/players-login?code=...`
 3. Frontend POSTs code to `/api/auth/discord/exchange`
 4. API exchanges code with Discord, upserts user in DB, signs a HS256 JWT (30d expiry)
 5. JWT stored in `localStorage` under `void_player_session`
 6. Protected pages send `Authorization: Bearer <token>` to `/api/auth/verify`
-7. Server verifies signature → returns Discord ID from token payload (unforgeable)
+7. Server verifies signature → returns Discord ID from token payload
 
 ### Middleware
 - `requireStaff` — vérifie JWT + requête DB pour rôle `staff`
-- Admin check — compare `discord_id` avec `ADMIN_DISCORD_ID` hardcodé
+- Admin check — compare `discord_id` avec `ADMIN_DISCORD_ID` hardcodé (`1243206708604702791`)
 
 ### Environment Variables / Secrets
 - `DISCORD_CLIENT_ID` — Discord app OAuth client ID
 - `DISCORD_CLIENT_SECRET` — Discord app OAuth client secret
-- `JWT_SECRET` — HS256 signing secret (shared env var, server-generated)
+- `JWT_SECRET` — HS256 signing secret
 - `DISCORD_BOT_TOKEN` — token du bot Discord VOID
 - `DATABASE_URL` — PostgreSQL connection string (Replit-managed)
 
 ### Key Files
-- `src/routes/discord-auth.ts` — Discord OAuth + JWT routes
-- `src/routes/staff.ts` — liste des membres (requireStaff)
-- `src/routes/bot.ts` — status + presence du bot (requireStaff)
-- `src/routes/admin.ts` — routes admin protégées
-- `src/routes/health.ts` — health check
-- `src/lib/bot.ts` — service discord.js (Client, BotInfo, startBot, getBotInfo, setBotPresence)
+- `src/routes/discord-auth.ts` — Discord OAuth + JWT
+- `src/routes/matcherino.ts` — toutes les routes Matcherino (public + staff)
+- `src/routes/staff.ts` — liste des membres
+- `src/routes/bot.ts` — status + presence
+- `src/routes/admin.ts` — routes admin
+- `src/lib/bot.ts` — service discord.js
+- `src/lib/matcherinoCard.ts` — génération PNG des cartes tournoi
+- `src/lib/autoAnnounce.ts` — service d'annonce automatique
 
 ---
 
@@ -146,17 +169,36 @@ Drizzle ORM + PostgreSQL.
 
 ### Schema
 - **`player_logins`** — Discord users who logged in via OAuth
-  - `id` serial PK
-  - `discord_id` text — Discord user ID (unique per user)
-  - `username` text — display name (global_name ?? username#discriminator)
-  - `discriminator` text — legacy `#0000` tag
-  - `avatar` text — avatar hash (for CDN URL construction)
-  - `last_login_at` timestamp
-  - `custom_avatar`, `banner`, `background`, `background_video` — profile customization
-  - `card_background` — card background shown on roster page (color/gradient/image URL)
-  - `font`, `music`, `links` (JSON), `brawl_tag` — profile extras
-  - `role` text — member role (alpha/omega/staff)
+  - `id` serial PK, `discord_id` unique, `username`, `discriminator`, `avatar`, `last_login_at`
+  - `custom_avatar`, `banner`, `background`, `background_video`, `card_background` — personnalisation profil
+  - `font`, `music`, `links` (JSON), `brawl_tag`, `role` (alpha/omega/staff)
+
+- **`matcherino_events`** — Événements Matcherino synchronisés depuis l'API
+  - `id` integer PK, `title`, `kind`, `start_at`, `end_at`, `total_balance`, `participants_count`
+  - `hero_img`, `background_img`, `thumbnail_img` — images
+  - `game_id`, `game_title`, `game_image`, `game_slug` — infos jeu
+  - `fetched_at` — date de dernière synchro
+  - `announced` boolean, `announced_at` — suivi des annonces Discord
+
+- **`settings`** — Paramètres applicatifs clé/valeur
+  - `key` text PK, `value` text, `updated_at` timestamp
+  - Clés utilisées : `matcherino.channelId`, `matcherino.autoAnnounce`, `matcherino.manualChannelId`
 
 ### Commands
 - `pnpm --filter @workspace/db run push` — push schema (interactive)
 - `pnpm --filter @workspace/db run push-force` — force push (destructive, skips prompts)
+
+---
+
+## Docker
+
+### Fichiers
+- `Dockerfile.api` — Build + runner pour l'API Express
+- `Dockerfile.web` — Build + runner nginx pour le frontend
+- `docker-entrypoint.sh` — Entrypoint de l'API : applique les migrations DB puis démarre le serveur
+- `.dockerignore` — Fichiers exclus du build context
+
+### Fonctionnement
+- **Dockerfile.api** : stage builder (pnpm install + esbuild), stage runner (pnpm + lib/db pour migrations + dist)
+- Au démarrage du container API, `docker-entrypoint.sh` exécute `pnpm --filter @workspace/db run push-force` puis lance `node dist/index.mjs`
+- **Dockerfile.web** : build Vite statique, servi par nginx avec `nginx.conf`

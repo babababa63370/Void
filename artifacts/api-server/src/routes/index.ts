@@ -5,7 +5,6 @@ import adminRouter from "./admin";
 import staffRouter from "./staff";
 import botRouter from "./bot";
 import playersRouter from "./players";
-import storageRouter from "./storage";
 import matcherinoRouter from "./matcherino";
 import brawlRouter from "./brawl";
 
@@ -17,7 +16,6 @@ router.use(adminRouter);
 router.use(staffRouter);
 router.use(botRouter);
 router.use(playersRouter);
-router.use(storageRouter);
 router.use(matcherinoRouter);
 router.use(brawlRouter);
 
