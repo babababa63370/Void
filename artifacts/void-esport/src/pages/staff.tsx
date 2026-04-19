@@ -249,6 +249,7 @@ function Uptime({ connectedAt }: { connectedAt: string }) {
 // ─── Bot ─────────────────────────────────────────────────────────────────────
 type BotStatus = "online" | "idle" | "dnd" | "invisible";
 type ActivityKind = "none" | "playing" | "listening" | "watching" | "streaming" | "competing";
+type BotMode = BotStatus | "streaming";
 
 interface BotInfo {
   connected: boolean;
@@ -265,21 +266,71 @@ interface BotInfo {
   };
 }
 
-const STATUS_OPTIONS: { value: BotStatus; label: string; color: string; dot: string }[] = [
-  { value: "online",    label: "En ligne",    color: "text-green-400",  dot: "bg-green-400" },
-  { value: "idle",      label: "Absent",      color: "text-yellow-400", dot: "bg-yellow-400" },
-  { value: "dnd",       label: "Ne pas déranger", color: "text-red-400", dot: "bg-red-400" },
-  { value: "invisible", label: "Invisible",   color: "text-gray-400",   dot: "bg-gray-400" },
+const MODE_OPTIONS: {
+  value: BotMode;
+  label: string;
+  sub: string;
+  dot: string;
+  border: string;
+  bg: string;
+  activeBorder: string;
+  activeBg: string;
+  activeText: string;
+}[] = [
+  {
+    value: "online",
+    label: "En ligne",
+    sub: "Visible et disponible",
+    dot: "bg-green-400",
+    border: "border-white/5",      bg: "bg-white/[0.02]",
+    activeBorder: "border-green-500/40", activeBg: "bg-green-500/10", activeText: "text-green-400",
+  },
+  {
+    value: "idle",
+    label: "Inactif",
+    sub: "Absent / AFK",
+    dot: "bg-yellow-400",
+    border: "border-white/5",      bg: "bg-white/[0.02]",
+    activeBorder: "border-yellow-500/40", activeBg: "bg-yellow-500/10", activeText: "text-yellow-400",
+  },
+  {
+    value: "dnd",
+    label: "Ne pas déranger",
+    sub: "NPD — aucune notif",
+    dot: "bg-red-400",
+    border: "border-white/5",      bg: "bg-white/[0.02]",
+    activeBorder: "border-red-500/40", activeBg: "bg-red-500/10", activeText: "text-red-400",
+  },
+  {
+    value: "invisible",
+    label: "Hors ligne",
+    sub: "Apparaît déconnecté",
+    dot: "bg-gray-500",
+    border: "border-white/5",      bg: "bg-white/[0.02]",
+    activeBorder: "border-gray-500/40", activeBg: "bg-gray-500/10", activeText: "text-gray-300",
+  },
+  {
+    value: "streaming",
+    label: "Streaming",
+    sub: "Live Twitch — badge violet",
+    dot: "bg-violet-500",
+    border: "border-white/5",      bg: "bg-white/[0.02]",
+    activeBorder: "border-violet-500/40", activeBg: "bg-violet-500/10", activeText: "text-violet-400",
+  },
 ];
 
-const ACTIVITY_OPTIONS: { value: ActivityKind; label: string }[] = [
-  { value: "none",       label: "Aucune activité" },
+const EXTRA_ACTIVITY_OPTIONS: { value: ActivityKind; label: string }[] = [
+  { value: "none",       label: "Aucune activité supplémentaire" },
   { value: "playing",    label: "Joue à…" },
   { value: "listening",  label: "Écoute…" },
   { value: "watching",   label: "Regarde…" },
-  { value: "streaming",  label: "Streaming…" },
   { value: "competing",  label: "En compétition dans…" },
 ];
+
+function modeFromPresence(p: BotInfo["presence"]): BotMode {
+  if (p.activityKind === "streaming") return "streaming";
+  return p.status;
+}
 
 function BotPage({ token }: { token: string }) {
   const [info, setInfo] = useState<BotInfo | null>(null);
@@ -287,45 +338,60 @@ function BotPage({ token }: { token: string }) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
 
-  const [status, setStatus] = useState<BotStatus>("online");
-  const [activityKind, setActivityKind] = useState<ActivityKind>("none");
-  const [activityName, setActivityName] = useState("");
+  const [mode, setMode] = useState<BotMode>("online");
   const [streamUrl, setStreamUrl] = useState("");
+  const [streamTitle, setStreamTitle] = useState("");
+  const [extraActivity, setExtraActivity] = useState<ActivityKind>("none");
+  const [extraActivityName, setExtraActivityName] = useState("");
 
-  const fetchStatus = useCallback(() => {
+  const fetchBotStatus = useCallback(() => {
     fetch("/api/bot/status", { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
       .then((data: BotInfo) => {
         setInfo(data);
-        setStatus(data.presence.status);
-        setActivityKind(data.presence.activityKind);
-        setActivityName(data.presence.activityName);
-        setStreamUrl(data.presence.streamUrl);
+        setMode(modeFromPresence(data.presence));
+        setStreamUrl(data.presence.streamUrl ?? "");
+        setStreamTitle(data.presence.activityKind === "streaming" ? data.presence.activityName : "");
+        if (data.presence.activityKind !== "streaming" && data.presence.activityKind !== "none") {
+          setExtraActivity(data.presence.activityKind);
+          setExtraActivityName(data.presence.activityName);
+        }
       })
       .catch(() => setInfo(null))
       .finally(() => setLoading(false));
   }, [token]);
 
-  useEffect(() => { fetchStatus(); }, [fetchStatus]);
+  useEffect(() => { fetchBotStatus(); }, [fetchBotStatus]);
 
   async function handleSave() {
+    if (!info?.connected) return;
     setSaving(true);
     setSaved(false);
     try {
-      await fetch("/api/bot/presence", {
+      const isStreaming = mode === "streaming";
+      const payload = {
+        status:       isStreaming ? "online" : (mode as BotStatus),
+        activityKind: isStreaming ? "streaming" : extraActivity,
+        activityName: isStreaming ? streamTitle : extraActivityName,
+        streamUrl:    isStreaming ? streamUrl : "",
+      };
+      const r = await fetch("/api/bot/presence", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ status, activityKind, activityName, streamUrl }),
+        body: JSON.stringify(payload),
       });
-      setSaved(true);
-      setTimeout(() => setSaved(false), 2500);
-      fetchStatus();
+      if (r.ok) {
+        setSaved(true);
+        setTimeout(() => setSaved(false), 2500);
+        fetchBotStatus();
+      }
     } finally {
       setSaving(false);
     }
   }
 
-  const currentStatusCfg = STATUS_OPTIONS.find((s) => s.value === (info?.presence.status ?? status));
+  const currentMode = info ? modeFromPresence(info.presence) : null;
+  const currentModeCfg = MODE_OPTIONS.find((m) => m.value === currentMode);
 
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
@@ -334,12 +400,13 @@ function BotPage({ token }: { token: string }) {
         <p className="text-xs text-muted-foreground">Gestion du bot Discord VOID</p>
       </div>
 
-      {/* Connection status */}
+      {/* ── Carte bot ── */}
       {loading ? (
-        <div className="flex items-center gap-2 text-muted-foreground/50 text-sm"><Loader2 className="w-4 h-4 animate-spin" />Connexion…</div>
+        <div className="flex items-center gap-2 text-muted-foreground/50 text-sm">
+          <Loader2 className="w-4 h-4 animate-spin" />Connexion…
+        </div>
       ) : (
         <div className={`flex items-start gap-4 p-4 border ${info?.connected ? "border-green-500/20 bg-green-500/5" : "border-red-500/20 bg-red-500/5"}`}>
-          {/* Avatar */}
           {info?.connected && info.id && info.avatar ? (
             <img
               src={`https://cdn.discordapp.com/avatars/${info.id}/${info.avatar}.png?size=80`}
@@ -351,9 +418,7 @@ function BotPage({ token }: { token: string }) {
               {info?.connected ? <Wifi className="w-6 h-6 text-green-400" /> : <WifiOff className="w-6 h-6 text-red-400" />}
             </div>
           )}
-
           <div className="flex-1 min-w-0">
-            {/* Name + status badge */}
             <div className="flex items-center gap-2 flex-wrap">
               {info?.connected && info.username ? (
                 <span className="font-orbitron font-black text-sm text-white tracking-wide">{info.username}</span>
@@ -362,103 +427,136 @@ function BotPage({ token }: { token: string }) {
                   {info?.connected ? "Connecté" : "Déconnecté"}
                 </span>
               )}
-              {info?.connected && currentStatusCfg && (
-                <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                  <span className={`w-2 h-2 rounded-full ${currentStatusCfg.dot}`} />
-                  {currentStatusCfg.label}
+              {info?.connected && currentModeCfg && (
+                <span className={`flex items-center gap-1.5 text-xs ${currentModeCfg.activeText}`}>
+                  <span className={`w-2 h-2 rounded-full ${currentModeCfg.dot}`} />
+                  {currentModeCfg.label}
                 </span>
               )}
             </div>
-
-            {/* ID */}
             {info?.connected && info.id && (
-              <p className="text-[11px] text-muted-foreground/50 font-mono mt-0.5 truncate">
-                ID : {info.id}
-              </p>
+              <p className="text-[11px] text-muted-foreground/50 font-mono mt-0.5 truncate">ID : {info.id}</p>
             )}
-
-            {/* Uptime */}
-            {info?.connected && info.connectedAt && (
-              <Uptime connectedAt={info.connectedAt} />
-            )}
+            {info?.connected && info.connectedAt && <Uptime connectedAt={info.connectedAt} />}
           </div>
         </div>
       )}
 
-      {/* Presence controls */}
+      {/* ── Contrôles ── */}
       {info?.connected && (
         <div className="space-y-5">
-          {/* Status */}
+          {/* Modes */}
           <div>
-            <p className="text-[11px] font-orbitron text-muted-foreground/40 uppercase tracking-widest mb-3">Statut</p>
-            <div className="grid grid-cols-2 gap-2">
-              {STATUS_OPTIONS.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setStatus(opt.value)}
-                  className={`flex items-center gap-2.5 px-3 py-2.5 border text-sm font-orbitron uppercase tracking-wider transition-colors ${
-                    status === opt.value
-                      ? "border-primary/50 bg-primary/10 text-primary"
-                      : "border-white/5 bg-white/[0.02] text-muted-foreground hover:bg-white/5"
-                  }`}
-                >
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${opt.dot}`} />
-                  {opt.label}
-                </button>
-              ))}
+            <p className="text-[11px] font-orbitron text-muted-foreground/40 uppercase tracking-widest mb-3">Mode</p>
+            <div className="grid grid-cols-1 gap-2">
+              {MODE_OPTIONS.map((opt) => {
+                const active = mode === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    onClick={() => setMode(opt.value)}
+                    className={`flex items-center gap-3 px-4 py-3 border text-left transition-colors ${
+                      active
+                        ? `${opt.activeBorder} ${opt.activeBg}`
+                        : `${opt.border} ${opt.bg} hover:bg-white/5`
+                    }`}
+                  >
+                    <span className={`w-3 h-3 rounded-full shrink-0 ${opt.dot}`} />
+                    <span className="flex-1">
+                      <span className={`block font-orbitron font-bold text-sm uppercase tracking-wider ${active ? opt.activeText : "text-muted-foreground"}`}>
+                        {opt.label}
+                      </span>
+                      <span className="block text-[11px] text-muted-foreground/40 mt-0.5">{opt.sub}</span>
+                    </span>
+                    {active && <span className={`w-1.5 h-1.5 rounded-full ${opt.dot}`} />}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {/* Activity */}
-          <div>
-            <p className="text-[11px] font-orbitron text-muted-foreground/40 uppercase tracking-widest mb-3">Activité</p>
-            <div className="space-y-2">
-              <select
-                value={activityKind}
-                onChange={(e) => setActivityKind(e.target.value as ActivityKind)}
-                className="w-full bg-white/[0.03] border border-white/10 text-white text-sm font-orbitron uppercase tracking-wider px-3 py-2.5 focus:outline-none focus:border-primary/50"
+          {/* Streaming fields */}
+          <AnimatePresence>
+            {mode === "streaming" && (
+              <motion.div
+                key="streaming-fields"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
               >
-                {ACTIVITY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value} className="bg-[#0f0f13] normal-case">
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-
-              {activityKind !== "none" && (
-                <input
-                  type="text"
-                  value={activityName}
-                  onChange={(e) => setActivityName(e.target.value)}
-                  placeholder={activityKind === "streaming" ? "Nom du stream…" : "Texte de l'activité…"}
-                  className="w-full bg-white/[0.03] border border-white/10 text-white text-sm px-3 py-2.5 focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground/40"
-                />
-              )}
-
-              {activityKind === "streaming" && (
-                <div className="flex items-center gap-2 px-3 py-2.5 border border-violet-500/20 bg-violet-500/5">
-                  <SiTwitch className="w-4 h-4 text-violet-400 shrink-0" />
+                <div className="space-y-2 pt-1">
+                  <p className="text-[11px] font-orbitron text-violet-400/60 uppercase tracking-widest mb-2">Streaming</p>
+                  <div className="flex items-center gap-2 px-3 py-2.5 border border-violet-500/30 bg-violet-500/5">
+                    <SiTwitch className="w-4 h-4 text-violet-400 shrink-0" />
+                    <input
+                      type="text"
+                      value={streamUrl}
+                      onChange={(e) => setStreamUrl(e.target.value)}
+                      placeholder="https://twitch.tv/votre_chaine"
+                      className="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder:text-muted-foreground/40"
+                    />
+                    <Radio className="w-3.5 h-3.5 text-violet-400/40 shrink-0" />
+                  </div>
                   <input
                     type="text"
-                    value={streamUrl}
-                    onChange={(e) => setStreamUrl(e.target.value)}
-                    placeholder="https://twitch.tv/votrechaîne"
-                    className="flex-1 bg-transparent text-white text-sm focus:outline-none placeholder:text-muted-foreground/40"
+                    value={streamTitle}
+                    onChange={(e) => setStreamTitle(e.target.value)}
+                    placeholder="Titre du stream (optionnel)…"
+                    className="w-full bg-white/[0.03] border border-white/10 text-white text-sm px-3 py-2.5 focus:outline-none focus:border-violet-500/50 placeholder:text-muted-foreground/40"
                   />
-                  <Radio className="w-3.5 h-3.5 text-violet-400/50 shrink-0" />
                 </div>
-              )}
-            </div>
-          </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Extra activity (non-streaming modes) */}
+          <AnimatePresence>
+            {mode !== "streaming" && (
+              <motion.div
+                key="extra-activity"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="space-y-2">
+                  <p className="text-[11px] font-orbitron text-muted-foreground/40 uppercase tracking-widest mb-2">Activité (optionnel)</p>
+                  <select
+                    value={extraActivity}
+                    onChange={(e) => setExtraActivity(e.target.value as ActivityKind)}
+                    className="w-full bg-white/[0.03] border border-white/10 text-white text-sm px-3 py-2.5 focus:outline-none focus:border-primary/50"
+                  >
+                    {EXTRA_ACTIVITY_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value} className="bg-[#0f0f13]">{opt.label}</option>
+                    ))}
+                  </select>
+                  {extraActivity !== "none" && (
+                    <input
+                      type="text"
+                      value={extraActivityName}
+                      onChange={(e) => setExtraActivityName(e.target.value)}
+                      placeholder="Texte de l'activité…"
+                      className="w-full bg-white/[0.03] border border-white/10 text-white text-sm px-3 py-2.5 focus:outline-none focus:border-primary/50 placeholder:text-muted-foreground/40"
+                    />
+                  )}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Save */}
           <button
             onClick={handleSave}
             disabled={saving}
-            className="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary/90 text-primary-foreground font-orbitron font-bold uppercase tracking-wider text-sm transition-colors disabled:opacity-50"
+            className={`flex items-center gap-2 px-5 py-2.5 font-orbitron font-bold uppercase tracking-wider text-sm transition-colors disabled:opacity-50 ${
+              mode === "streaming"
+                ? "bg-violet-600 hover:bg-violet-500 text-white"
+                : "bg-primary hover:bg-primary/90 text-primary-foreground"
+            }`}
           >
             {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {saved ? "Sauvegardé !" : "Appliquer"}
+            {saved ? "Appliqué !" : "Appliquer"}
           </button>
         </div>
       )}
