@@ -1,9 +1,10 @@
 import { motion } from "framer-motion";
-import { ShieldCheck, ShieldX, LogIn, Users, Crown, Crosshair, UserCheck, ExternalLink, Loader2 } from "lucide-react";
+import { ShieldCheck, Users, Crown, Crosshair, UserCheck, ExternalLink, Loader2 } from "lucide-react";
 import { SiDiscord } from "react-icons/si";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useSession } from "@/hooks/useSession";
 import Navbar from "@/components/layout/navbar";
+import NotFound from "@/pages/not-found";
 
 const ADMIN_DISCORD_ID = "1243206708604702791";
 
@@ -43,39 +44,7 @@ export default function Staff() {
   }
 
   if (!session || !isStaff) {
-    return (
-      <>
-        <Navbar />
-        <div className="min-h-screen flex items-center justify-center bg-background px-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="max-w-md w-full text-center"
-          >
-            <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-red-500/10 border border-red-500/20 mb-6">
-              <ShieldX className="w-10 h-10 text-red-400" />
-            </div>
-            <h1 className="font-orbitron font-black text-2xl uppercase tracking-widest text-white mb-3">
-              Accès refusé
-            </h1>
-            <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
-              {!session
-                ? "Tu dois être connecté avec un compte Discord ayant le rôle Staff pour accéder à cette zone."
-                : "Ton compte ne dispose pas du rôle Staff nécessaire pour accéder à cette page."}
-            </p>
-            {!session && (
-              <a
-                href="/players-login"
-                className="inline-flex items-center gap-2 bg-[#5865F2] hover:bg-[#4752C4] text-white font-orbitron font-bold uppercase tracking-wider px-6 py-3 transition-colors"
-              >
-                <LogIn className="w-4 h-4" />
-                Se connecter
-              </a>
-            )}
-          </motion.div>
-        </div>
-      </>
-    );
+    return <NotFound />;
   }
 
   return (
