@@ -39,7 +39,7 @@ interface Player {
   username: string;
   avatar: string | null;
   discriminator: string;
-  role: string | null;
+  roles: string[];
   lastLoginAt: string;
 }
 
@@ -67,18 +67,22 @@ function getSession(): Session | null {
 function RoleSheet({
   player,
   token,
-  onRoleChange,
+  onRolesChange,
   onClose,
 }: {
   player: Player;
   token: string;
-  onRoleChange: (discordId: string, role: string | null) => void;
+  onRolesChange: (discordId: string, roles: string[]) => void;
   onClose: () => void;
 }) {
   const [loading, setLoading] = useState<string | null>(null);
+  const [localRoles, setLocalRoles] = useState<string[]>(player.roles ?? []);
 
-  async function assignRole(role: RoleValue | null) {
-    setLoading(role ?? "none");
+  async function toggleRole(role: RoleValue) {
+    setLoading(role);
+    const next = localRoles.includes(role)
+      ? localRoles.filter((r) => r !== role)
+      : [...localRoles, role];
     try {
       const res = await fetch(`/api/admin/players/${player.discordId}/role`, {
         method: "PATCH",
@@ -86,11 +90,31 @@ function RoleSheet({
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ role }),
+        body: JSON.stringify({ roles: next }),
       });
       if (res.ok) {
-        onRoleChange(player.discordId, role);
-        onClose();
+        setLocalRoles(next);
+        onRolesChange(player.discordId, next);
+      }
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function clearRoles() {
+    setLoading("clear");
+    try {
+      const res = await fetch(`/api/admin/players/${player.discordId}/role`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ roles: [] }),
+      });
+      if (res.ok) {
+        setLocalRoles([]);
+        onRolesChange(player.discordId, []);
       }
     } finally {
       setLoading(null);
@@ -146,16 +170,16 @@ function RoleSheet({
         {/* Role options */}
         <div className="px-4 py-3 space-y-2">
           <p className="text-[10px] font-orbitron uppercase tracking-widest text-muted-foreground/40 px-1 pb-1">
-            Assigner un rôle
+            Rôles — plusieurs possibles
           </p>
 
           {ROLES.map((r) => {
-            const isActive = player.role === r.value;
+            const isActive = localRoles.includes(r.value);
             const isLoading = loading === r.value;
             return (
               <button
                 key={r.value}
-                onClick={() => void assignRole(r.value)}
+                onClick={() => void toggleRole(r.value)}
                 disabled={!!loading}
                 className={`w-full flex items-center gap-4 px-4 py-4 border transition-all active:scale-[0.98] ${
                   isActive
@@ -175,27 +199,27 @@ function RoleSheet({
                 <span className="font-orbitron font-bold text-sm uppercase tracking-wider">{r.label}</span>
                 {isActive && (
                   <span className="ml-auto text-[10px] font-orbitron uppercase tracking-widest opacity-60">
-                    Actuel
+                    ✓ Actif
                   </span>
                 )}
               </button>
             );
           })}
 
-          {player.role && (
+          {localRoles.length > 0 && (
             <button
-              onClick={() => void assignRole(null)}
+              onClick={() => void clearRoles()}
               disabled={!!loading}
               className="w-full flex items-center gap-4 px-4 py-4 border border-red-500/20 bg-red-500/5 text-red-400/70 transition-all active:scale-[0.98]"
             >
               <div className="w-9 h-9 flex items-center justify-center rounded-full border border-red-500/20 bg-red-500/10">
-                {loading === "none" ? (
+                {loading === "clear" ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
                   <X className="w-4 h-4" />
                 )}
               </div>
-              <span className="font-orbitron font-bold text-sm uppercase tracking-wider">Retirer le rôle</span>
+              <span className="font-orbitron font-bold text-sm uppercase tracking-wider">Retirer tous les rôles</span>
             </button>
           )}
         </div>
@@ -216,7 +240,7 @@ function PlayerRow({
   index: number;
   onTap: (player: Player) => void;
 }) {
-  const currentRole = ROLES.find((r) => r.value === player.role);
+  const activeRoles = ROLES.filter((r) => (player.roles ?? []).includes(r.value));
   const loginDate = new Date(player.lastLoginAt).toLocaleDateString("fr-FR", {
     day: "2-digit",
     month: "short",
@@ -245,13 +269,15 @@ function PlayerRow({
         <p className="text-[11px] text-muted-foreground/40 font-mono mt-0.5">{loginDate}</p>
       </div>
 
-      {/* Role badge + chevron */}
-      <div className="flex items-center gap-2 shrink-0">
-        {currentRole ? (
-          <span className={`flex items-center gap-1 px-2 py-1 border text-[10px] font-orbitron uppercase tracking-wider rounded-sm ${currentRole.pill}`}>
-            <currentRole.icon className="w-2.5 h-2.5" />
-            {currentRole.label}
-          </span>
+      {/* Role badges + chevron */}
+      <div className="flex items-center gap-1.5 shrink-0 flex-wrap justify-end max-w-[140px]">
+        {activeRoles.length > 0 ? (
+          activeRoles.map((r) => (
+            <span key={r.value} className={`flex items-center gap-1 px-2 py-1 border text-[10px] font-orbitron uppercase tracking-wider rounded-sm ${r.pill}`}>
+              <r.icon className="w-2.5 h-2.5" />
+              {r.label}
+            </span>
+          ))
         ) : (
           <span className="text-[10px] font-orbitron uppercase tracking-widest text-muted-foreground/25">
             —
@@ -305,9 +331,9 @@ export default function Meonix() {
       .catch(() => setAccess("denied"));
   }, [loadPlayers]);
 
-  const handleRoleChange = useCallback((discordId: string, role: string | null) => {
-    setPlayers((prev) => prev.map((p) => (p.discordId === discordId ? { ...p, role } : p)));
-    setSheetPlayer((prev) => (prev?.discordId === discordId ? { ...prev, role } : prev));
+  const handleRolesChange = useCallback((discordId: string, roles: string[]) => {
+    setPlayers((prev) => prev.map((p) => (p.discordId === discordId ? { ...p, roles } : p)));
+    setSheetPlayer((prev) => (prev?.discordId === discordId ? { ...prev, roles } : prev));
   }, []);
 
   if (access === "loading") {
@@ -322,13 +348,13 @@ export default function Meonix() {
 
   const counts = {
     all: players.length,
-    alpha: players.filter((p) => p.role === "alpha").length,
-    omega: players.filter((p) => p.role === "omega").length,
-    staff: players.filter((p) => p.role === "staff").length,
+    alpha: players.filter((p) => (p.roles ?? []).includes("alpha")).length,
+    omega: players.filter((p) => (p.roles ?? []).includes("omega")).length,
+    staff: players.filter((p) => (p.roles ?? []).includes("staff")).length,
   };
 
   const filteredPlayers =
-    activeFilter === "all" ? players : players.filter((p) => p.role === activeFilter);
+    activeFilter === "all" ? players : players.filter((p) => (p.roles ?? []).includes(activeFilter));
 
   const filterTabs = [
     { key: "all" as const, label: "Tous", count: counts.all },
@@ -475,7 +501,7 @@ export default function Meonix() {
           <RoleSheet
             player={sheetPlayer}
             token={user!.token}
-            onRoleChange={handleRoleChange}
+            onRolesChange={handleRolesChange}
             onClose={() => setSheetPlayer(null)}
           />
         )}

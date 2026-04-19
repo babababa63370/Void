@@ -1,4 +1,5 @@
 import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -11,7 +12,7 @@ export const playerLoginsTable = pgTable("player_logins", {
   username: text("username").notNull(),
   discriminator: text("discriminator").default(""),
   avatar: text("avatar"),
-  role: text("role"),
+  roles: text("roles").array().notNull().default(sql`'{}'`),
   customAvatar: text("custom_avatar"),
   banner: text("banner"),
   background: text("background"),

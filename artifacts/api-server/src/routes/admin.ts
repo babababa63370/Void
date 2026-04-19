@@ -43,7 +43,7 @@ router.get("/admin/players", async (req, res) => {
       username: playerLoginsTable.username,
       avatar: playerLoginsTable.avatar,
       discriminator: playerLoginsTable.discriminator,
-      role: playerLoginsTable.role,
+      roles: playerLoginsTable.roles,
       lastLoginAt: playerLoginsTable.lastLoginAt,
     })
     .from(playerLoginsTable)
@@ -52,17 +52,24 @@ router.get("/admin/players", async (req, res) => {
   res.json({ players });
 });
 
-// PATCH /api/admin/players/:discordId/role — assign role to a player
+// PATCH /api/admin/players/:discordId/role — assign roles to a player
 router.patch("/admin/players/:discordId/role", async (req, res) => {
   const adminId = await requireAdmin(req, res);
   if (!adminId) return;
 
   const { discordId } = req.params;
-  const { role } = req.body as { role?: string | null };
+  const { roles } = req.body as { roles?: string[] };
 
-  if (role !== null && role !== undefined && !PLAYER_ROLES.includes(role as typeof PLAYER_ROLES[number])) {
-    res.status(400).json({ error: "invalid_role", validRoles: PLAYER_ROLES });
+  if (!Array.isArray(roles)) {
+    res.status(400).json({ error: "roles_must_be_array" });
     return;
+  }
+
+  for (const r of roles) {
+    if (!PLAYER_ROLES.includes(r as typeof PLAYER_ROLES[number])) {
+      res.status(400).json({ error: "invalid_role", invalid: r, validRoles: PLAYER_ROLES });
+      return;
+    }
   }
 
   const existing = await db
@@ -75,13 +82,15 @@ router.patch("/admin/players/:discordId/role", async (req, res) => {
     return;
   }
 
+  // Deduplicate
+  const uniqueRoles = [...new Set(roles)];
+
   await db
     .update(playerLoginsTable)
-    .set({ role: role ?? null })
+    .set({ roles: uniqueRoles })
     .where(eq(playerLoginsTable.discordId, discordId));
 
-  res.json({ discordId, role: role ?? null });
+  res.json({ discordId, roles: uniqueRoles });
 });
 
 export default router;
-
