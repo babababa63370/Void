@@ -1,5 +1,5 @@
 import { db, matcherinoEventsTable, settingsTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, notInArray } from "drizzle-orm";
 import { sendMatcherinoAnnouncement } from "./bot";
 
 const PING_ID = "1495421946832359504";
@@ -74,6 +74,15 @@ async function syncAndAnnounce(): Promise<void> {
           fetchedAt: new Date(),
           announced: false,
         });
+      } else {
+        await db
+          .update(matcherinoEventsTable)
+          .set({
+            participantsCount: s.participantsCount ?? existing.participantsCount,
+            totalBalance: s.totalBalance ?? existing.totalBalance,
+            fetchedAt: new Date(),
+          })
+          .where(eq(matcherinoEventsTable.id, s.id));
       }
 
       const row = existing ?? (await db.select().from(matcherinoEventsTable).where(eq(matcherinoEventsTable.id, s.id)))[0];
@@ -99,6 +108,18 @@ async function syncAndAnnounce(): Promise<void> {
 
       state.lastAnnouncedTitle = row.title;
       state.lastAnnouncedAt = new Date().toISOString();
+    }
+    const returnedIds = ours.map((s) => s.id);
+    if (returnedIds.length > 0) {
+      await db
+        .update(matcherinoEventsTable)
+        .set({ finalizedAt: new Date() })
+        .where(
+          and(
+            isNull(matcherinoEventsTable.finalizedAt),
+            notInArray(matcherinoEventsTable.id, returnedIds)
+          )
+        );
     }
   } catch (err) {
     console.error("[AutoAnnounce] Error during sync:", err);
