@@ -1,5 +1,20 @@
-import { Client, GatewayIntentBits, ActivityType, type PresenceStatusData, TextChannel, AttachmentBuilder } from "discord.js";
-import { generateMatcherinoCard } from "./matcherinoCard";
+import {
+  Client,
+  GatewayIntentBits,
+  ActivityType,
+  type PresenceStatusData,
+  Events,
+  InteractionType,
+} from "discord.js";
+import { db, matcherinoEventsTable } from "@workspace/db";
+import { gt, isNull, asc } from "drizzle-orm";
+import {
+  text, sep, gallery, container, cv2,
+  sendCv2Message, replyInteraction, registerSlashCommands,
+  tsLong, tsRelative,
+} from "../utils/cv2.js";
+
+// ─── Presence ─────────────────────────────────────────────────────────────────
 
 export type BotStatus = "online" | "idle" | "dnd" | "invisible";
 export type ActivityKind = "none" | "playing" | "listening" | "watching" | "streaming" | "competing";
@@ -21,7 +36,9 @@ export interface BotInfo {
   presence: BotPresence;
 }
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds],
+});
 
 let connected = false;
 let connectedAt: Date | null = null;
@@ -32,10 +49,28 @@ let currentPresence: BotPresence = {
   streamUrl: "",
 };
 
-client.once("clientReady", () => {
+// ─── Slash commands definition ─────────────────────────────────────────────────
+
+const SLASH_COMMANDS = [
+  {
+    name: "event",
+    description: "Show upcoming VOID Matcherino tournaments",
+  },
+];
+
+// ─── Ready ────────────────────────────────────────────────────────────────────
+
+client.once(Events.ClientReady, async (c) => {
   connected = true;
   connectedAt = new Date();
-  console.log(`[Bot] Logged in as ${client.user?.tag}`);
+  console.log(`[Bot] Logged in as ${c.user.tag}`);
+
+  const token = process.env.DISCORD_BOT_TOKEN!;
+  try {
+    await registerSlashCommands(c.user.id, token, SLASH_COMMANDS);
+  } catch (err) {
+    console.error("[Bot] Failed to register slash commands:", err);
+  }
 });
 
 client.on("error", (err) => {
@@ -46,6 +81,88 @@ client.on("error", (err) => {
 client.on("shardDisconnect", () => {
   connected = false;
 });
+
+// ─── Interaction handler ───────────────────────────────────────────────────────
+
+client.on(Events.InteractionCreate, async (interaction) => {
+  if (interaction.type !== InteractionType.ApplicationCommand) return;
+  if (interaction.commandName !== "event") return;
+
+  try {
+    const now = new Date();
+    const events = await db
+      .select()
+      .from(matcherinoEventsTable)
+      .where(isNull(matcherinoEventsTable.finalizedAt))
+      .orderBy(asc(matcherinoEventsTable.startAt))
+      .limit(5);
+
+    const upcoming = events.filter(
+      (e) => e.startAt && new Date(e.startAt) > now,
+    );
+
+    if (!upcoming.length) {
+      await replyInteraction(
+        interaction.id,
+        interaction.token,
+        cv2([
+          container([
+            text("# 🏆 Upcoming Tournaments"),
+            sep(),
+            text("No upcoming tournaments at the moment.\nCheck back soon!"),
+          ], 0x8b5cf6),
+        ]),
+        true,
+      );
+      return;
+    }
+
+    const children: ReturnType<typeof text | typeof sep>[] = [
+      text("# 🏆 Upcoming VOID Tournaments"),
+      sep(2),
+    ];
+
+    for (let i = 0; i < upcoming.length; i++) {
+      const ev = upcoming[i];
+      const startUnix = ev.startAt ? Math.floor(new Date(ev.startAt).getTime() / 1000) : null;
+      const endUnix = ev.endAt ? Math.floor(new Date(ev.endAt).getTime() / 1000) : null;
+
+      let dateBlock = "";
+      if (startUnix) {
+        dateBlock += `📅 **Starts** <t:${startUnix}:F> — <t:${startUnix}:R>`;
+      }
+      if (endUnix) {
+        dateBlock += `\n🏁 **Ends** <t:${endUnix}:F>`;
+      }
+
+      children.push(
+        text(
+          `**${ev.title}**\n${dateBlock}\n\n` +
+          `🔗 [View on VOID](https://void.meonix.me/matcherino/${ev.id})`,
+        ),
+      );
+      if (i < upcoming.length - 1) children.push(sep());
+    }
+
+    await replyInteraction(
+      interaction.id,
+      interaction.token,
+      cv2([container(children as Parameters<typeof container>[0], 0x8b5cf6)]),
+    );
+  } catch (err) {
+    console.error("[Bot] /event error:", err);
+    try {
+      await replyInteraction(
+        interaction.id,
+        interaction.token,
+        cv2([container([text("❌ Failed to load events. Please try again later.")])]),
+        true,
+      );
+    } catch {}
+  }
+});
+
+// ─── Start ────────────────────────────────────────────────────────────────────
 
 export async function startBot(): Promise<void> {
   const token = process.env.DISCORD_BOT_TOKEN;
@@ -72,6 +189,8 @@ export function getBotInfo(): BotInfo {
   };
 }
 
+// ─── Matcherino announcement (Components V2) ──────────────────────────────────
+
 export interface MatcherinoAnnouncePayload {
   id: number;
   title: string;
@@ -85,25 +204,65 @@ export interface MatcherinoAnnouncePayload {
   pingId?: string;
 }
 
+const ACCENT_PURPLE = 0x8b5cf6;
+const VOID_BASE = "https://void.meonix.me";
+
 export async function sendMatcherinoAnnouncement(
   channelId: string,
   event: MatcherinoAnnouncePayload,
 ): Promise<void> {
-  if (!connected || !client.isReady()) throw new Error("Bot not connected");
-  const channel = await client.channels.fetch(channelId);
-  if (!channel || !(channel instanceof TextChannel)) throw new Error("Channel not found or not a text channel");
+  const token = process.env.DISCORD_BOT_TOKEN;
+  if (!token) throw new Error("DISCORD_BOT_TOKEN not set");
 
-  const imageBuffer = await generateMatcherinoCard(event);
-  const filename = `tournament-${event.id}${event.isTest ? "-test" : ""}.png`;
-  const attachment = new AttachmentBuilder(imageBuffer, { name: filename });
+  const startUnix = event.startAt
+    ? Math.floor(new Date(event.startAt).getTime() / 1000)
+    : null;
+  const endUnix = event.endAt
+    ? Math.floor(new Date(event.endAt).getTime() / 1000)
+    : null;
 
-  const ping = event.pingId ? `<@&${event.pingId}> ` : "";
-  const caption = event.isTest
-    ? `🧪 **[TEST]** — Voici un aperçu de la carte pour **${event.title}**`
-    : `${ping}🏆 **Nouveau tournoi VOID !** → <https://matcherino.com/tournaments/${event.id}>`;
+  // ── Build date block ──
+  let dateBlock = "";
+  if (startUnix) {
+    dateBlock += `📅 **Starts** <t:${startUnix}:F>\n⏰ <t:${startUnix}:R>`;
+  }
+  if (endUnix) {
+    dateBlock += `\n🏁 **Ends** <t:${endUnix}:F>`;
+  }
+  if (!dateBlock) dateBlock = "📅 Date TBA";
 
-  await channel.send({ content: caption, files: [attachment] });
+  // ── Build links block ──
+  const voidLink = `${VOID_BASE}/matcherino/${event.id}`;
+  const matcherinoLink = `https://matcherino.com/tournaments/${event.id}`;
+  const linksBlock =
+    `🔗 [View on VOID](${voidLink})\n` +
+    `🎯 [View on Matcherino](${matcherinoLink})`;
+
+  // ── Assemble container children ──
+  const children: Parameters<typeof container>[0] = [
+    text(event.isTest ? "# 🧪 [TEST] New Tournament" : "# 🏆 New Tournament"),
+    text(`**${event.title}**${event.gameTitle ? ` — *${event.gameTitle}*` : ""}`),
+    sep(),
+  ];
+
+  if (event.heroImg) {
+    children.push(gallery([event.heroImg]));
+    children.push(sep());
+  }
+
+  children.push(text(dateBlock));
+  children.push(sep());
+  children.push(text(linksBlock));
+  children.push(text("-# Sent automatically by VOID bot"));
+
+  const ping = event.pingId && !event.isTest ? `<@&${event.pingId}>` : undefined;
+
+  const payload = cv2([container(children, ACCENT_PURPLE)], ping);
+
+  await sendCv2Message(channelId, payload, token);
 }
+
+// ─── Presence ─────────────────────────────────────────────────────────────────
 
 export async function setBotPresence(presence: BotPresence): Promise<void> {
   if (!connected || !client.user) throw new Error("Bot not connected");
@@ -116,7 +275,6 @@ export async function setBotPresence(presence: BotPresence): Promise<void> {
   };
 
   const activities = [];
-
   if (presence.activityKind !== "none" && presence.activityName) {
     const typeMap: Record<ActivityKind, ActivityType | null> = {
       none: null,
@@ -139,10 +297,6 @@ export async function setBotPresence(presence: BotPresence): Promise<void> {
     }
   }
 
-  client.user.setPresence({
-    status: statusMap[presence.status],
-    activities,
-  });
-
+  client.user.setPresence({ status: statusMap[presence.status], activities });
   currentPresence = { ...presence };
 }
