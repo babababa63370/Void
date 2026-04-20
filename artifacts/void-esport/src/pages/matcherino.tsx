@@ -23,6 +23,7 @@ interface MatcherinoEvent {
   kind: string;
   startAt: string | null;
   endAt: string | null;
+  finalizedAt: string | null;
   totalBalance: number;
   participantsCount: number;
   heroImg: string;
@@ -72,10 +73,10 @@ export default function Matcherino() {
   const [lastSync, setLastSync] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"active" | "finished">("active");
 
-  const now = new Date();
-  const activeEvents = events.filter((e) => !e.endAt || new Date(e.endAt) > now);
-  const finishedEvents = events.filter((e) => e.endAt && new Date(e.endAt) <= now)
-    .sort((a, b) => new Date(b.endAt!).getTime() - new Date(a.endAt!).getTime());
+  const activeEvents = events.filter((e) => !e.finalizedAt);
+  const finishedEvents = events
+    .filter((e) => !!e.finalizedAt)
+    .sort((a, b) => new Date(b.finalizedAt!).getTime() - new Date(a.finalizedAt!).getTime());
   const displayedEvents = activeTab === "active" ? activeEvents : finishedEvents;
 
   const baseUrl = import.meta.env.BASE_URL?.replace(/\/$/, "") ?? "";

@@ -15,6 +15,7 @@ export const matcherinoEventsTable = pgTable("matcherino_events", {
   gameTitle: text("game_title"),
   gameImage: text("game_image"),
   gameSlug: text("game_slug"),
+  finalizedAt: timestamp("finalized_at", { withTimezone: true }),
   fetchedAt: timestamp("fetched_at", { withTimezone: true }).defaultNow().notNull(),
   announced: boolean("announced").notNull().default(false),
   announcedAt: timestamp("announced_at", { withTimezone: true }),

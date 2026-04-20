@@ -115,7 +115,7 @@ async function fetchAndSyncEvents(): Promise<void> {
           title: detail?.title ?? s.title ?? `Tournament ${s.id}`,
           kind: "tournament",
           startAt: s.startAt ? new Date(s.startAt) : null,
-          endAt: s.endAt ? new Date(s.endAt) : null,
+          endAt: detail?.endAt ? new Date(detail.endAt) : s.endAt ? new Date(s.endAt) : null,
           totalBalance: s.totalBalance ?? 0,
           participantsCount: s.participantsCount ?? 0,
           heroImg: detail?.heroImg ?? s.heroImg ?? "",
@@ -125,6 +125,7 @@ async function fetchAndSyncEvents(): Promise<void> {
           gameTitle: s.game?.title ?? null,
           gameImage: s.game?.image ?? null,
           gameSlug: s.game?.slug ?? null,
+          finalizedAt: detail?.finalizedAt ? new Date(detail.finalizedAt) : null,
           fetchedAt: new Date(),
         })
         .onConflictDoUpdate({
@@ -132,7 +133,7 @@ async function fetchAndSyncEvents(): Promise<void> {
           set: {
             title: detail?.title ?? s.title ?? `Tournament ${s.id}`,
             startAt: s.startAt ? new Date(s.startAt) : null,
-            endAt: s.endAt ? new Date(s.endAt) : null,
+            endAt: detail?.endAt ? new Date(detail.endAt) : s.endAt ? new Date(s.endAt) : null,
             totalBalance: s.totalBalance ?? 0,
             participantsCount: s.participantsCount ?? 0,
             heroImg: detail?.heroImg ?? s.heroImg ?? "",
@@ -142,6 +143,7 @@ async function fetchAndSyncEvents(): Promise<void> {
             gameTitle: s.game?.title ?? null,
             gameImage: s.game?.image ?? null,
             gameSlug: s.game?.slug ?? null,
+            finalizedAt: detail?.finalizedAt ? new Date(detail.finalizedAt) : null,
             fetchedAt: new Date(),
           },
         });

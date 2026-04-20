@@ -573,6 +573,7 @@ interface MEvent {
   kind: string;
   startAt: string | null;
   endAt: string | null;
+  finalizedAt: string | null;
   totalBalance: number;
   participantsCount: number;
   heroImg: string;
@@ -722,9 +723,8 @@ function MatcherinoPage({ token }: { token: string }) {
     } catch {} finally { setPreviewLoading(false); }
   }
 
-  const now = new Date();
-  const active = events.filter((e) => !e.endAt || new Date(e.endAt) > now);
-  const finished = events.filter((e) => e.endAt && new Date(e.endAt) <= now);
+  const active = events.filter((e) => !e.finalizedAt);
+  const finished = events.filter((e) => !!e.finalizedAt);
 
   function fmtRelative(iso: string) {
     const diff = new Date(iso).getTime() - Date.now();
