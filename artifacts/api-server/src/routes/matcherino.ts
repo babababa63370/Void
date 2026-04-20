@@ -324,7 +324,13 @@ router.post("/staff/matcherino/announce", async (req, res) => {
       totalBalance: event.totalBalance,
       isTest: isTest ?? false,
     });
-    res.json({ success: true });
+    if (!isTest) {
+      await db
+        .update(matcherinoEventsTable)
+        .set({ announced: true, announcedAt: new Date() })
+        .where(eq(matcherinoEventsTable.id, event.id));
+    }
+    res.json({ success: true, announced: !isTest });
   } catch (err: any) {
     res.status(500).json({ error: err?.message ?? "Failed to send announcement" });
   }

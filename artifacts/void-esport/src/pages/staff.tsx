@@ -574,6 +574,8 @@ interface MEvent {
   startAt: string | null;
   endAt: string | null;
   finalizedAt: string | null;
+  announced: boolean;
+  announcedAt: string | null;
   totalBalance: number;
   participantsCount: number;
   heroImg: string;
@@ -603,7 +605,6 @@ function MatcherinoPage({ token }: { token: string }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [channelId, setChannelId] = useState("");
-  const [announced, setAnnounced] = useState<Record<number, boolean>>({});
   const [sending, setSending] = useState<Record<number, boolean>>({});
   const [feedback, setFeedback] = useState<Record<number, "ok" | "err">>({});
 
@@ -681,7 +682,7 @@ function MatcherinoPage({ token }: { token: string }) {
         body: JSON.stringify({ eventId, channelId: channelId.trim(), isTest }),
       });
       if (r.ok) {
-        if (!isTest) setAnnounced((p) => ({ ...p, [eventId]: true }));
+        if (!isTest) setEvents((prev) => prev.map((e) => e.id === eventId ? { ...e, announced: true, announcedAt: new Date().toISOString() } : e));
         setFeedback((p) => ({ ...p, [eventId]: "ok" }));
       } else setFeedback((p) => ({ ...p, [eventId]: "err" }));
     } catch { setFeedback((p) => ({ ...p, [eventId]: "err" })); }
@@ -879,10 +880,9 @@ function MatcherinoPage({ token }: { token: string }) {
               <div className="grid gap-3">
                 {active.map((event, i) => (
                   <EventCard key={event.id} event={event} i={i}
-                    announced={!!announced[event.id]} sending={!!sending[event.id]}
+                    announced={event.announced} sending={!!sending[event.id]}
                     feedback={feedback[event.id]} channelId={channelId}
                     isPreviewing={previewId === event.id}
-                    onToggle={() => setAnnounced((p) => ({ ...p, [event.id]: !p[event.id] }))}
                     onAnnounce={() => announce(event.id, false)}
                     onTest={() => announce(event.id, true)}
                     onPreview={() => loadPreview(event.id)}
@@ -897,10 +897,9 @@ function MatcherinoPage({ token }: { token: string }) {
               <div className="grid gap-3 opacity-60">
                 {finished.map((event, i) => (
                   <EventCard key={event.id} event={event} i={i}
-                    announced={!!announced[event.id]} sending={!!sending[event.id]}
+                    announced={event.announced} sending={!!sending[event.id]}
                     feedback={feedback[event.id]} channelId={channelId}
                     isPreviewing={previewId === event.id}
-                    onToggle={() => setAnnounced((p) => ({ ...p, [event.id]: !p[event.id] }))}
                     onAnnounce={() => announce(event.id, false)}
                     onTest={() => announce(event.id, true)}
                     onPreview={() => loadPreview(event.id)}
@@ -916,7 +915,7 @@ function MatcherinoPage({ token }: { token: string }) {
 }
 
 function EventCard({
-  event, i, announced, sending, feedback, channelId, isPreviewing, onToggle, onAnnounce, onTest, onPreview,
+  event, i, announced, sending, feedback, channelId, isPreviewing, onAnnounce, onTest, onPreview,
 }: {
   event: MEvent;
   i: number;
@@ -925,7 +924,6 @@ function EventCard({
   feedback?: "ok" | "err";
   channelId: string;
   isPreviewing: boolean;
-  onToggle: () => void;
   onAnnounce: () => void;
   onTest: () => void;
   onPreview: () => void;
@@ -979,19 +977,12 @@ function EventCard({
 
           {/* Actions */}
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            {/* Toggle */}
-            <button
-              onClick={onToggle}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 border text-[10px] font-orbitron uppercase tracking-wider transition-colors ${
-                announced
-                  ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/20"
-                  : "border-white/10 bg-white/[0.02] text-muted-foreground/50 hover:text-white hover:bg-white/5"
-              }`}
-            >
-              {announced
-                ? <><ToggleRight className="w-3.5 h-3.5" /> Actif</>
-                : <><ToggleLeft className="w-3.5 h-3.5" /> Inactif</>}
-            </button>
+            {/* Announced badge */}
+            {announced && (
+              <span className="flex items-center gap-1.5 px-2.5 py-1.5 border border-primary/30 bg-primary/10 text-primary text-[10px] font-orbitron uppercase tracking-wider">
+                <ToggleRight className="w-3.5 h-3.5" /> Annoncé
+              </span>
+            )}
 
             {/* Preview */}
             <button
