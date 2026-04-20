@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, notInArray } from "drizzle-orm";
 import { db, matcherinoEventsTable } from "@workspace/db";
 import { jwtVerify } from "jose";
 import { sql } from "drizzle-orm";
@@ -149,6 +149,19 @@ async function fetchAndSyncEvents(): Promise<void> {
         });
     }),
   );
+
+  const returnedIds = summaries.map((s) => s.id);
+  if (returnedIds.length > 0) {
+    await db
+      .update(matcherinoEventsTable)
+      .set({ finalizedAt: new Date() })
+      .where(
+        and(
+          isNull(matcherinoEventsTable.finalizedAt),
+          notInArray(matcherinoEventsTable.id, returnedIds)
+        )
+      );
+  }
 }
 
 router.get("/matcherino/events/:id", async (req, res) => {
