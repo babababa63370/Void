@@ -118,7 +118,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
 
-    const children: ReturnType<typeof text | typeof sep>[] = [
+    const children: Parameters<typeof container>[0] = [
       text("# 🏆 Upcoming VOID Tournaments"),
       sep(2),
     ];
@@ -136,11 +136,15 @@ client.on(Events.InteractionCreate, async (interaction) => {
         dateBlock += `\n🏁 **Ends** <t:${endUnix}:F>`;
       }
 
+      children.push(text(`**${ev.title}**\n${dateBlock}`));
       children.push(
-        text(
-          `**${ev.title}**\n${dateBlock}\n\n` +
-          `🔗 [View on VOID](https://void.meonix.me/matcherino/${ev.id})`,
-        ),
+        actionRow([
+          linkButton("View on VOID", `${VOID_BASE}/matcherino/${ev.id}`, { name: "🔗" }),
+          linkButton("View on Matcherino", `https://matcherino.com/tournaments/${ev.id}`, {
+            id: "1494738441349632050",
+            name: "matcherino5e",
+          }),
+        ]),
       );
       if (i < upcoming.length - 1) children.push(sep());
     }
@@ -148,7 +152,7 @@ client.on(Events.InteractionCreate, async (interaction) => {
     await replyInteraction(
       interaction.id,
       interaction.token,
-      cv2([container(children as Parameters<typeof container>[0], 0x8b5cf6)]),
+      cv2([container(children, 0x8b5cf6)]),
     );
   } catch (err) {
     console.error("[Bot] /event error:", err);
