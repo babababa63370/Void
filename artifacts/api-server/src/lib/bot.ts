@@ -9,10 +9,11 @@ import {
 import { db, matcherinoEventsTable } from "@workspace/db";
 import { gt, isNull, asc } from "drizzle-orm";
 import {
-  text, sep, gallery, container, cv2,
+  text, sep, gallery, container, cv2, linkButton, actionRow,
   sendCv2Message, replyInteraction, registerSlashCommands,
   tsLong, tsRelative,
 } from "../utils/cv2.js";
+import { generateMatcherinoCard } from "./matcherinoCard.js";
 
 // ─── Presence ─────────────────────────────────────────────────────────────────
 
@@ -231,12 +232,24 @@ export async function sendMatcherinoAnnouncement(
   }
   if (!dateBlock) dateBlock = "📅 Date TBA";
 
-  // ── Build links block ──
+  // ── Build link buttons ──
   const voidLink = `${VOID_BASE}/matcherino/${event.id}`;
   const matcherinoLink = `https://matcherino.com/tournaments/${event.id}`;
-  const linksBlock =
-    `🔗 [View on VOID](${voidLink})\n` +
-    `🎯 [View on Matcherino](${matcherinoLink})`;
+  const buttons = actionRow([
+    linkButton("View on VOID", voidLink, { name: "🔗" }),
+    linkButton("View on Matcherino", matcherinoLink, {
+      id: "1494738441349632050",
+      name: "matcherino5e",
+    }),
+  ]);
+
+  // ── Generate sharp card ──
+  let cardBuffer: Buffer | null = null;
+  try {
+    cardBuffer = await generateMatcherinoCard(event);
+  } catch (err) {
+    console.error("[Bot] Failed to generate matcherino card:", err);
+  }
 
   // ── Assemble container children ──
   const children: Parameters<typeof container>[0] = [
@@ -245,21 +258,28 @@ export async function sendMatcherinoAnnouncement(
     sep(),
   ];
 
-  if (event.heroImg) {
-    children.push(gallery([event.heroImg]));
+  if (cardBuffer) {
+    children.push(gallery(["attachment://card.png"]));
     children.push(sep());
   }
 
   children.push(text(dateBlock));
   children.push(sep());
-  children.push(text(linksBlock));
+  children.push(buttons);
   children.push(text("-# Sent automatically by VOID bot"));
 
   const ping = event.pingId && !event.isTest ? `<@&${event.pingId}>` : undefined;
 
   const payload = cv2([container(children, ACCENT_PURPLE)], ping);
 
-  await sendCv2Message(channelId, payload, token);
+  await sendCv2Message(
+    channelId,
+    payload,
+    token,
+    cardBuffer
+      ? [{ name: "card.png", data: cardBuffer, contentType: "image/png" }]
+      : undefined,
+  );
 }
 
 // ─── Presence ─────────────────────────────────────────────────────────────────

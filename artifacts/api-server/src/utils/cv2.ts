@@ -46,6 +46,12 @@ export interface MediaGallery {
   id?: number;
 }
 
+export interface ButtonEmoji {
+  id?: string;
+  name?: string;
+  animated?: boolean;
+}
+
 export interface Button {
   type: 2;
   style: 1 | 2 | 3 | 4 | 5; // 5 = Link
@@ -53,6 +59,7 @@ export interface Button {
   url?: string;
   custom_id?: string;
   disabled?: boolean;
+  emoji?: ButtonEmoji;
 }
 
 export interface ActionRow {
@@ -93,8 +100,8 @@ export function gallery(urls: string[]): MediaGallery {
   };
 }
 
-export function linkButton(label: string, url: string): Button {
-  return { type: CType.Button, style: 5, label, url };
+export function linkButton(label: string, url: string, emoji?: ButtonEmoji): Button {
+  return { type: CType.Button, style: 5, label, url, ...(emoji ? { emoji } : {}) };
 }
 
 export function actionRow(buttons: Button[]): ActionRow {
@@ -144,16 +151,51 @@ function botHeaders(token: string): HeadersInit {
   };
 }
 
-/** Send a CV2 message to a channel. */
+export interface CV2File {
+  name: string;
+  data: Buffer;
+  contentType?: string;
+}
+
+/** Send a CV2 message to a channel. Optionally with file attachments. */
 export async function sendCv2Message(
   channelId: string,
   payload: CV2Payload,
   token: string,
+  files?: CV2File[],
 ): Promise<void> {
-  const res = await fetch(`${DISCORD_API}/channels/${channelId}/messages`, {
+  const url = `${DISCORD_API}/channels/${channelId}/messages`;
+
+  if (!files || files.length === 0) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: botHeaders(token),
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Discord API error ${res.status}: ${body}`);
+    }
+    return;
+  }
+
+  const fullPayload = {
+    ...payload,
+    attachments: files.map((f, i) => ({ id: i, filename: f.name })),
+  };
+  const form = new FormData();
+  form.append("payload_json", JSON.stringify(fullPayload));
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    const blob = new Blob([new Uint8Array(f.data)], {
+      type: f.contentType ?? "application/octet-stream",
+    });
+    form.append(`files[${i}]`, blob, f.name);
+  }
+  const res = await fetch(url, {
     method: "POST",
-    headers: botHeaders(token),
-    body: JSON.stringify(payload),
+    headers: { Authorization: `Bot ${token}` },
+    body: form,
   });
   if (!res.ok) {
     const body = await res.text();
