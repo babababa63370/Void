@@ -14,6 +14,7 @@ import {
   RefreshCw,
   ChevronRight,
   ArrowLeft,
+  Database,
 } from "lucide-react";
 
 const ALLOWED_ID = "1243206708604702791";
@@ -372,10 +373,17 @@ export default function Meonix() {
       <div className="relative z-10 flex flex-col min-h-[100dvh]">
 
         {/* ── Back ── */}
-        <div className="px-4 pt-6">
+        <div className="px-4 pt-6 flex items-center justify-between gap-2">
           <a href="/" className="inline-flex items-center gap-2 text-xs font-orbitron uppercase tracking-widest text-white/40 hover:text-primary transition-colors">
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to home
+          </a>
+          <a
+            href="/meonix/db"
+            className="inline-flex items-center gap-2 px-3 py-2 border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 hover:text-violet-200 text-[11px] font-orbitron uppercase tracking-widest transition-colors active:scale-95"
+          >
+            <Database className="w-3.5 h-3.5" />
+            DB Admin
           </a>
         </div>
 
