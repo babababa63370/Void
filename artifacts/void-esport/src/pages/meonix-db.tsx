@@ -8,6 +8,7 @@ import {
   Trash2,
   RefreshCw,
   HardDriveDownload,
+  HardDriveUpload,
   ArrowRightLeft,
   AlertCircle,
   CheckCircle2,
@@ -15,6 +16,7 @@ import {
   Server,
   Clock,
   FileJson,
+  X,
 } from "lucide-react";
 import NotFound from "@/pages/not-found";
 import { usePageMeta } from "@/hooks/usePageMeta";
@@ -50,6 +52,13 @@ interface Backup {
 interface MigrationReport {
   table: string;
   copied: number;
+  skipped: number;
+  error?: string;
+}
+
+interface RestoreReport {
+  table: string;
+  restored: number;
   skipped: number;
   error?: string;
 }
@@ -142,6 +151,10 @@ export default function MeonixDb() {
   const [migrationMode, setMigrationMode] = useState<"merge" | "replace">("merge");
   const [migrationReport, setMigrationReport] = useState<MigrationReport[] | null>(null);
   const [confirmMigrate, setConfirmMigrate] = useState(false);
+  const [restoreDialog, setRestoreDialog] = useState<{ name: string } | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<"current" | "old">("current");
+  const [restoreMode, setRestoreMode] = useState<"merge" | "replace">("replace");
+  const [restoreReport, setRestoreReport] = useState<RestoreReport[] | null>(null);
 
   // Auth
   useEffect(() => {
@@ -240,6 +253,39 @@ export default function MeonixDb() {
         URL.revokeObjectURL(url);
       })
       .catch(() => showToast("err", "Téléchargement échoué"));
+  };
+
+  const openRestore = (name: string) => {
+    setRestoreDialog({ name });
+    setRestoreTarget("current");
+    setRestoreMode("replace");
+    setRestoreReport(null);
+  };
+
+  const runRestore = async () => {
+    if (!restoreDialog) return;
+    setBusy(`restore-${restoreDialog.name}`);
+    setRestoreReport(null);
+    try {
+      const r = await fetch(`/api/meonix/db/backups/${restoreDialog.name}/restore`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: JSON.stringify({ target: restoreTarget, mode: restoreMode }),
+      });
+      const d = await r.json();
+      if (!r.ok) {
+        setRestoreReport(d.report ?? null);
+        throw new Error(d.error ?? "restore_failed");
+      }
+      setRestoreReport(d.report);
+      const totalRestored = (d.report as RestoreReport[]).reduce((s, x) => s + x.restored, 0);
+      showToast("ok", `Backup chargé : ${totalRestored} lignes restaurées`);
+      await loadStatus();
+    } catch (err: any) {
+      showToast("err", err?.message ?? "Restauration échouée");
+    } finally {
+      setBusy(null);
+    }
   };
 
   const deleteBackup = async (name: string) => {
@@ -405,6 +451,15 @@ export default function MeonixDb() {
                     </div>
                     <div className="flex gap-1 shrink-0">
                       <button
+                        onClick={() => openRestore(b.name)}
+                        disabled={busy === `restore-${b.name}`}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-2 border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-[10px] font-orbitron uppercase tracking-widest transition-colors disabled:opacity-40"
+                        title="Charger ce backup dans une DB"
+                      >
+                        {busy === `restore-${b.name}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <HardDriveUpload className="w-3 h-3" />}
+                        Load
+                      </button>
+                      <button
                         onClick={() => downloadBackup(b.name)}
                         className="p-2 text-muted-foreground hover:text-emerald-400 hover:bg-emerald-500/10 transition-colors"
                         title="Télécharger"
@@ -516,6 +571,130 @@ export default function MeonixDb() {
           </div>
         </section>
       </div>
+
+      {/* Restore Dialog */}
+      {restoreDialog && (
+        <div
+          className="fixed inset-0 z-40 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => busy !== `restore-${restoreDialog.name}` && setRestoreDialog(null)}
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-full max-w-lg border border-amber-500/30 bg-background/95 backdrop-blur shadow-2xl"
+          >
+            <div className="flex items-start justify-between p-5 border-b border-white/5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 flex items-center justify-center border border-amber-500/40 bg-amber-500/10 text-amber-300">
+                  <HardDriveUpload className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="font-orbitron font-bold text-sm uppercase tracking-widest text-white">Charger backup</p>
+                  <p className="text-[10px] font-mono text-muted-foreground/60 truncate max-w-[280px]">{restoreDialog.name}</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setRestoreDialog(null)}
+                disabled={busy === `restore-${restoreDialog.name}`}
+                className="p-1 text-muted-foreground hover:text-white transition-colors disabled:opacity-40"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-5 space-y-5">
+              <div className="flex items-start gap-3 p-3 border border-amber-500/20 bg-amber-500/5">
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-200/80 leading-relaxed">
+                  Restaure les données du backup dans la DB sélectionnée. En mode <strong>replace</strong>, les tables cibles seront <strong>vidées</strong> avant insertion.
+                </p>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-orbitron uppercase tracking-widest text-muted-foreground/60 mb-2">Cible</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setRestoreTarget("current")}
+                    className={`flex-1 px-3 py-2.5 border text-left transition-colors ${restoreTarget === "current" ? "border-violet-500/50 bg-violet-500/10" : "border-white/10 hover:border-white/20"}`}
+                  >
+                    <p className={`text-xs font-orbitron uppercase tracking-widest ${restoreTarget === "current" ? "text-violet-300" : "text-white"}`}>Nouvelle DB</p>
+                    <p className="text-[10px] text-muted-foreground/70 mt-0.5">DATABASE_URL</p>
+                  </button>
+                  <button
+                    onClick={() => setRestoreTarget("old")}
+                    disabled={!status?.old.connected}
+                    className={`flex-1 px-3 py-2.5 border text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${restoreTarget === "old" ? "border-cyan-500/50 bg-cyan-500/10" : "border-white/10 hover:border-white/20"}`}
+                  >
+                    <p className={`text-xs font-orbitron uppercase tracking-widest ${restoreTarget === "old" ? "text-cyan-300" : "text-white"}`}>Ancienne DB</p>
+                    <p className="text-[10px] text-muted-foreground/70 mt-0.5">OLD_DATABASE_URL</p>
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[10px] font-orbitron uppercase tracking-widest text-muted-foreground/60 mb-2">Mode</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setRestoreMode("merge")}
+                    className={`flex-1 px-3 py-2.5 border text-left transition-colors ${restoreMode === "merge" ? "border-violet-500/50 bg-violet-500/10" : "border-white/10 hover:border-white/20"}`}
+                  >
+                    <p className={`text-xs font-orbitron uppercase tracking-widest ${restoreMode === "merge" ? "text-violet-300" : "text-white"}`}>Merge</p>
+                    <p className="text-[10px] text-muted-foreground/70 mt-0.5">Upsert, conserve l'existant</p>
+                  </button>
+                  <button
+                    onClick={() => setRestoreMode("replace")}
+                    className={`flex-1 px-3 py-2.5 border text-left transition-colors ${restoreMode === "replace" ? "border-red-500/50 bg-red-500/10" : "border-white/10 hover:border-white/20"}`}
+                  >
+                    <p className={`text-xs font-orbitron uppercase tracking-widest ${restoreMode === "replace" ? "text-red-300" : "text-white"}`}>Replace</p>
+                    <p className="text-[10px] text-muted-foreground/70 mt-0.5">Truncate puis insère</p>
+                  </button>
+                </div>
+              </div>
+
+              {restoreReport && restoreReport.length > 0 && (
+                <div className="pt-3 border-t border-white/5">
+                  <p className="text-[10px] font-orbitron uppercase tracking-widest text-muted-foreground/60 mb-2">Rapport</p>
+                  <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                    {restoreReport.map((row) => (
+                      <div key={row.table} className="flex items-center justify-between text-xs font-mono py-1.5 px-3 bg-white/[0.02]">
+                        <span className="text-white">{row.table}</span>
+                        <div className="flex items-center gap-3">
+                          <span className="text-emerald-400">+{row.restored}</span>
+                          {row.skipped > 0 && <span className="text-muted-foreground">~{row.skipped}</span>}
+                          {row.error && (
+                            <span className="text-red-400 text-[10px] max-w-[160px] truncate" title={row.error}>
+                              {row.error}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-2">
+                <button
+                  onClick={() => setRestoreDialog(null)}
+                  disabled={busy === `restore-${restoreDialog.name}`}
+                  className="flex-1 px-4 py-3 border border-white/10 hover:border-white/20 text-xs font-orbitron uppercase tracking-widest text-muted-foreground hover:text-white transition-colors disabled:opacity-40"
+                >
+                  Fermer
+                </button>
+                <button
+                  onClick={runRestore}
+                  disabled={busy === `restore-${restoreDialog.name}`}
+                  className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-3 border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-orbitron uppercase tracking-widest transition-colors disabled:opacity-40"
+                >
+                  {busy === `restore-${restoreDialog.name}` ? <Loader2 className="w-3 h-3 animate-spin" /> : <HardDriveUpload className="w-3 h-3" />}
+                  Charger ({restoreMode})
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
     </div>
   );
 }

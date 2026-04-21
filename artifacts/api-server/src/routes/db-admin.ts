@@ -200,6 +200,109 @@ router.delete("/meonix/db/backups/:name", async (req, res) => {
   }
 });
 
+// ─── Restore from backup ────────────────────────────────────────────────────
+
+router.post("/meonix/db/backups/:name/restore", async (req, res) => {
+  if (!(await requireAdmin(req, res))) return;
+  const name = req.params.name;
+  if (!/^[a-zA-Z0-9._-]+\.json$/.test(name)) {
+    res.status(400).json({ error: "invalid_name" });
+    return;
+  }
+  const target = (req.body?.target as string) === "old" ? "old" : "current";
+  const mode = (req.body?.mode as string) === "merge" ? "merge" : "replace";
+  const url = target === "old" ? process.env.OLD_DATABASE_URL : process.env.DATABASE_URL;
+  if (!url) {
+    res.status(400).json({ error: `${target}_url_not_configured` });
+    return;
+  }
+
+  const filepath = path.join(BACKUPS_DIR, name);
+  const report: Array<{ table: string; restored: number; skipped: number; error?: string }> = [];
+
+  try {
+    const raw = await fs.readFile(filepath, "utf8");
+    const data = JSON.parse(raw) as { tables: Record<string, any[]> };
+    if (!data?.tables || typeof data.tables !== "object") {
+      res.status(400).json({ error: "invalid_backup_file" });
+      return;
+    }
+
+    await withPool(url, async (pool) => {
+      const existingTables = new Set(await listTables(pool));
+
+      for (const [t, rows] of Object.entries(data.tables)) {
+        if (!Array.isArray(rows)) continue;
+        const entry = { table: t, restored: 0, skipped: 0 } as { table: string; restored: number; skipped: number; error?: string };
+
+        if (!existingTables.has(t)) {
+          entry.error = "table_missing_in_target";
+          report.push(entry);
+          continue;
+        }
+
+        try {
+          const targetCols = new Set(await getTableColumns(pool, t));
+
+          if (mode === "replace") {
+            await pool.query(`TRUNCATE TABLE "${t}" RESTART IDENTITY CASCADE`);
+          }
+
+          const pkRes = await pool.query<{ attname: string }>(
+            `SELECT a.attname
+             FROM pg_index i
+             JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+             WHERE i.indrelid = $1::regclass AND i.indisprimary`,
+            [`public."${t}"`],
+          );
+          const pkColsAll = pkRes.rows.map((r) => r.attname);
+
+          for (const row of rows) {
+            if (!row || typeof row !== "object") { entry.skipped++; continue; }
+            const cols = Object.keys(row).filter((c) => targetCols.has(c));
+            if (cols.length === 0) { entry.skipped++; continue; }
+            const pkCols = pkColsAll.filter((c) => cols.includes(c));
+            const placeholders = cols.map((_, i) => `$${i + 1}`).join(", ");
+            const values = cols.map((c) => (row as any)[c]);
+            let sql = `INSERT INTO "${t}" (${cols.map((c) => `"${c}"`).join(", ")}) VALUES (${placeholders})`;
+            if (mode === "merge" && pkCols.length > 0) {
+              const updateCols = cols.filter((c) => !pkCols.includes(c));
+              if (updateCols.length > 0) {
+                sql += ` ON CONFLICT (${pkCols.map((c) => `"${c}"`).join(", ")}) DO UPDATE SET ${updateCols
+                  .map((c) => `"${c}" = EXCLUDED."${c}"`)
+                  .join(", ")}`;
+              } else {
+                sql += ` ON CONFLICT DO NOTHING`;
+              }
+            } else if (mode === "merge") {
+              sql += ` ON CONFLICT DO NOTHING`;
+            }
+            try {
+              const r = await pool.query(sql, values);
+              if ((r.rowCount ?? 0) > 0) entry.restored++;
+              else entry.skipped++;
+            } catch (e: any) {
+              entry.skipped++;
+              if (!entry.error) entry.error = e?.message?.slice(0, 200);
+            }
+          }
+        } catch (e: any) {
+          entry.error = e?.message ?? "table_failed";
+        }
+        report.push(entry);
+      }
+    });
+
+    res.json({ success: true, target, mode, report });
+  } catch (err: any) {
+    if (err?.code === "ENOENT") {
+      res.status(404).json({ error: "not_found" });
+      return;
+    }
+    res.status(500).json({ error: err?.message ?? "restore_failed", report });
+  }
+});
+
 // ─── Migration (old → current) ─────────────────────────────────────────────
 
 router.post("/meonix/db/migrate", async (req, res) => {
