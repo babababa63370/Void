@@ -48,6 +48,7 @@ type AccessState = "loading" | "granted" | "denied";
 
 function avatarUrl(discordId: string, avatar: string | null, discriminator: string): string {
   if (avatar) return `https://cdn.discordapp.com/avatars/${discordId}/${avatar}.webp?size=128`;
+  if (!/^\d+$/.test(discordId)) return `https://cdn.discordapp.com/embed/avatars/0.png`;
   const idx = Number(
     discriminator === "0"
       ? (BigInt(discordId) >> 22n) % 6n

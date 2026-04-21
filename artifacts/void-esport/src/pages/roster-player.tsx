@@ -84,6 +84,7 @@ const DEFAULT_BG = "linear-gradient(135deg,#0a0a0e 0%,#1a0a2e 100%)";
 
 function discordAvatar(discordId: string, avatar: string | null, discriminator: string): string {
   if (avatar) return `https://cdn.discordapp.com/avatars/${discordId}/${avatar}.webp?size=256`;
+  if (!/^\d+$/.test(discordId)) return `https://cdn.discordapp.com/embed/avatars/0.png`;
   const idx = Number(discriminator === "0" ? (BigInt(discordId) >> 22n) % 6n : parseInt(discriminator) % 5);
   return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
 }

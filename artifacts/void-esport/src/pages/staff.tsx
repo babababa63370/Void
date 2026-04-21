@@ -17,6 +17,7 @@ const ADMIN_DISCORD_ID = "1243206708604702791";
 
 function avatarUrl(discordId: string, avatar: string | null): string {
   if (avatar) return `https://cdn.discordapp.com/avatars/${discordId}/${avatar}.webp?size=128`;
+  if (!/^\d+$/.test(discordId)) return `https://cdn.discordapp.com/embed/avatars/0.png`;
   const idx = Number((BigInt(discordId) >> 22n) % 6n);
   return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
 }

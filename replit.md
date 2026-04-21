@@ -13,7 +13,7 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **API framework**: Express 5
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
-- **Auth**: Discord OAuth2 + JWT (jose, HS256, 30 days)
+- **Auth**: Discord OAuth2 **+ Email/Password (bcryptjs)** + JWT (jose, HS256, 30 days)
 - **Build**: esbuild (ESM bundle via `build.mjs`)
 - **Image generation**: sharp (SVG → PNG pour les cartes Matcherino)
 - **Discord bot**: discord.js v14
@@ -49,9 +49,10 @@ Competitive Brawl Stars esport clan site with cyberpunk/esports aesthetic.
 - `/terms` — Terms of service
 - `/privacy` — Privacy policy
 - `/achievements` — Palmarès / Legacy (page vide pour l'instant : "Rien encore pour l'instant")
-- `/players-login` — Player Portal (Discord OAuth login, noindex, hidden from nav)
+- `/players-login` — Player Portal (Discord OAuth **+ Email/Password signup/login**, noindex, hidden from nav)
 - `/staff` — Staff Panel (Discord OAuth requis + rôle `staff`), sous-routes : Overview / Liste staff / Bot Panel / Matcherino
 - `/meonix` — Zone restreinte accessible uniquement à l'ID Discord `1243206708604702791` (sinon 404)
+- `/meonix/db` — Admin DB (statut, backups JSON, migration ancienne→nouvelle DB) — Meonix uniquement
 - `/*` — Animated 404 page
 
 ### i18n System (`src/i18n/`)
@@ -103,7 +104,10 @@ Express 5 server sur le port 8080, chemins proxifiés via `/api`.
 - `GET /api/healthz` — health check
 - `GET /api/auth/discord/url?redirectUri=...` — returns Discord OAuth authorization URL
 - `POST /api/auth/discord/exchange` — exchanges OAuth code for Discord user info + signed JWT
+- `POST /api/auth/email/signup` — `{ email, password (>=8), username }` → crée un compte email + JWT
+- `POST /api/auth/email/login` — `{ email, password }` → vérifie bcrypt + retourne JWT
 - `GET /api/auth/verify` — validates JWT (Bearer token), returns Discord ID, user info + roles
+- `GET /api/meonix/db/*` & `POST/DELETE` — admin DB (status, backups JSON, migration old→new) — Meonix uniquement
 - `GET /api/brawl/player/:tag` — proxy vers l'API Brawl Stars
 - `GET /api/staff/members` — liste des membres (staff uniquement)
 - `GET /api/bot/status` — infos du bot Discord
@@ -132,6 +136,8 @@ Express 5 server sur le port 8080, chemins proxifiés via `/api`.
 - Se réactive automatiquement au redémarrage du serveur si `matcherino.autoAnnounce = true`
 
 ### Auth Flow
+
+**Discord OAuth :**
 1. Frontend calls `/api/auth/discord/url` → gets OAuth URL
 2. User authorizes on Discord → redirected to `/players-login?code=...`
 3. Frontend POSTs code to `/api/auth/discord/exchange`
@@ -139,6 +145,12 @@ Express 5 server sur le port 8080, chemins proxifiés via `/api`.
 5. JWT stored in `localStorage` under `void_player_session`
 6. Protected pages send `Authorization: Bearer <token>` to `/api/auth/verify`
 7. Server verifies signature → returns Discord ID from token payload
+
+**Email/Password :**
+- Signup : email (unique), pseudo (unique, 2-32), mot de passe (>=8 chars) → bcrypt hash, ID synthétique `email:<uuid>` stocké comme `discord_id`, `auth_type = "email"`, JWT signé identique au flow Discord
+- Login : vérification bcrypt → JWT
+- Une fois connectés, les comptes email partagent **exactement** le même système que les Discord : même JWT, même `payload.sub`, même table, mêmes routes admin/staff/players. Meonix peut leur attribuer les rôles `alpha`/`omega`/`staff` via `/meonix`.
+- Les helpers `avatarUrl` détectent les IDs non-numériques (`email:xxx`) et affichent l'avatar Discord par défaut #0.
 
 ### Middleware
 - `requireStaff` — vérifie JWT + requête DB pour rôle `staff`
@@ -153,6 +165,8 @@ Express 5 server sur le port 8080, chemins proxifiés via `/api`.
 
 ### Key Files
 - `src/routes/discord-auth.ts` — Discord OAuth + JWT
+- `src/routes/email-auth.ts` — Email/Password signup/login (bcryptjs) + JWT
+- `src/routes/db-admin.ts` — DB status, backups JSON, migration old→new (Meonix only)
 - `src/routes/matcherino.ts` — toutes les routes Matcherino (public + staff)
 - `src/routes/staff.ts` — liste des membres
 - `src/routes/bot.ts` — status + presence
@@ -168,10 +182,11 @@ Express 5 server sur le port 8080, chemins proxifiés via `/api`.
 Drizzle ORM + PostgreSQL.
 
 ### Schema
-- **`player_logins`** — Discord users who logged in via OAuth
-  - `id` serial PK, `discord_id` unique, `username`, `discriminator`, `avatar`, `last_login_at`
+- **`player_logins`** — Tous les comptes (Discord OAuth **et** Email/Password)
+  - `id` serial PK, `discord_id` (unique — pour comptes email : `email:<uuid>`), `username`, `discriminator`, `avatar`, `last_login_at`
+  - `email` (unique nullable), `password_hash` (bcrypt, nullable), `auth_type` (`discord` | `email`, default `discord`)
   - `custom_avatar`, `banner`, `background`, `background_video`, `card_background` — personnalisation profil
-  - `font`, `music`, `links` (JSON), `brawl_tag`, `role` (alpha/omega/staff)
+  - `font`, `music`, `links` (JSON), `brawl_tag`, `roles` text[] (alpha/omega/staff)
 
 - **`matcherino_events`** — Événements Matcherino synchronisés depuis l'API
   - `id` integer PK, `title`, `kind`, `start_at`, `end_at`, `total_balance`, `participants_count`
