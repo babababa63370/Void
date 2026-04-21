@@ -252,11 +252,17 @@ export async function sendMatcherinoAnnouncement(
   }
 
   // ── Assemble container children ──
-  const children: Parameters<typeof container>[0] = [
+  const shouldPing = !!event.pingId && !event.isTest;
+  const children: Parameters<typeof container>[0] = [];
+  if (shouldPing) {
+    children.push(text(`<@&${event.pingId}>`));
+    children.push(sep());
+  }
+  children.push(
     text(event.isTest ? "# 🧪 [TEST] New Tournament" : "# 🏆 New Tournament"),
     text(`**${event.title}**${event.gameTitle ? ` — *${event.gameTitle}*` : ""}`),
     sep(),
-  ];
+  );
 
   if (cardBuffer) {
     children.push(gallery(["attachment://card.png"]));
@@ -268,9 +274,10 @@ export async function sendMatcherinoAnnouncement(
   children.push(buttons);
   children.push(text("-# Sent automatically by VOID bot"));
 
-  const ping = event.pingId && !event.isTest ? `<@&${event.pingId}>` : undefined;
-
-  const payload = cv2([container(children, ACCENT_PURPLE)], ping);
+  const payload = cv2([container(children, ACCENT_PURPLE)]);
+  if (shouldPing && event.pingId) {
+    payload.allowed_mentions = { parse: [], roles: [event.pingId] };
+  }
 
   await sendCv2Message(
     channelId,

@@ -77,10 +77,18 @@ export interface Container {
   id?: number;
 }
 
+export interface AllowedMentions {
+  parse?: Array<"roles" | "users" | "everyone">;
+  roles?: string[];
+  users?: string[];
+  replied_user?: boolean;
+}
+
 export interface CV2Payload {
   flags: number;
   components: Container[];
   content?: string;
+  allowed_mentions?: AllowedMentions;
 }
 
 // ─── Builder helpers ─────────────────────────────────────────────────────────
