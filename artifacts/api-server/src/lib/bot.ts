@@ -168,37 +168,50 @@ async function handleEventCommand(interaction: any): Promise<void> {
 function buildMapDetail(ev: BrawlEvent): ReturnType<typeof cv2> {
   const startUnix = Math.floor(parseApiTime(ev.startTime).getTime() / 1000);
   const endUnix = Math.floor(parseApiTime(ev.endTime).getTime() / 1000);
+
   const children: Parameters<typeof container>[0] = [
-    text(`# ${ev.event.map}`),
-    text(`**Mode** — ${prettyMode(ev.event.mode)}`),
-    sep(),
+    text(`# 🗺️ ${ev.event.map}`),
+    text(`-# ${prettyMode(ev.event.mode)}`),
+    sep(2),
   ];
+
   if (ev.event.mapImage) {
     children.push(gallery([ev.event.mapImage]));
-    children.push(sep());
+    children.push(sep(2));
   }
-  let timeBlock = "";
-  if (!isNaN(startUnix)) timeBlock += `🟢 **Started** <t:${startUnix}:R>`;
-  if (!isNaN(endUnix)) timeBlock += `${timeBlock ? "\n" : ""}🔴 **Ends** <t:${endUnix}:F> — <t:${endUnix}:R>`;
-  if (timeBlock) children.push(text(timeBlock));
+
+  children.push(text("### ⏱️ Rotation"));
+  const lines: string[] = [];
+  if (!isNaN(startUnix)) lines.push(`🟢 **Début** — <t:${startUnix}:F> (<t:${startUnix}:R>)`);
+  if (!isNaN(endUnix)) lines.push(`🔴 **Fin** — <t:${endUnix}:F> (<t:${endUnix}:R>)`);
+  children.push(text(lines.join("\n") || "—"));
+
+  children.push(sep());
+  children.push(text(`-# Event ID \`${ev.event.id}\` • données : api.meonix.me`));
+
   return cv2([container(children, BRAWL_ACCENT)]);
 }
 
 function buildMapOverview(active: BrawlEvent[]): ReturnType<typeof cv2> {
   const children: Parameters<typeof container>[0] = [
-    text("# Brawl Stars — Rotation en cours"),
-    text(`${active.length} événement${active.length > 1 ? "s" : ""} actuellement disponible${active.length > 1 ? "s" : ""}. Sélectionne un événement ci-dessous pour voir sa map.`),
-    sep(),
+    text("# 🌀 Brawl Stars — Rotation en cours"),
+    text(
+      `-# ${active.length} événement${active.length > 1 ? "s" : ""} actuellement disponible${active.length > 1 ? "s" : ""} · Sélectionne-en un ci-dessous pour voir sa map.`,
+    ),
+    sep(2),
+    text("### 🎮 Événements actifs"),
   ];
 
-  // List of active events as text
-  for (const ev of active.slice(0, 20)) {
+  const shown = active.slice(0, 20);
+  shown.forEach((ev, i) => {
     const endUnix = Math.floor(parseApiTime(ev.endTime).getTime() / 1000);
-    const endPart = !isNaN(endUnix) ? ` — ends <t:${endUnix}:R>` : "";
-    children.push(text(`**${prettyMode(ev.event.mode)}** — ${ev.event.map}${endPart}`));
-  }
+    const endPart = !isNaN(endUnix) ? `\n-# 🔴 se termine <t:${endUnix}:R>` : "";
+    children.push(text(`**${prettyMode(ev.event.mode)}** · ${ev.event.map}${endPart}`));
+    if (i < shown.length - 1) children.push(sep());
+  });
 
-  children.push(sep());
+  children.push(sep(2));
+  children.push(text("### 🔎 Voir une map en détail"));
   children.push(
     actionRow([
       stringSelect(
@@ -206,12 +219,15 @@ function buildMapOverview(active: BrawlEvent[]): ReturnType<typeof cv2> {
         active.slice(0, 25).map((ev) => ({
           label: `${prettyMode(ev.event.mode)} — ${ev.event.map}`.slice(0, 100),
           value: String(ev.event.id),
-          description: `ID ${ev.event.id}`.slice(0, 100),
+          description: `Event #${ev.event.id}`.slice(0, 100),
         })),
-        "Choisis un événement",
+        "Choisis un événement…",
       ),
     ]),
   );
+
+  children.push(sep());
+  children.push(text("-# Astuce : utilise `/maps event:<nom>` pour un accès direct avec autocomplétion."));
 
   return cv2([container(children, BRAWL_ACCENT)]);
 }
@@ -228,7 +244,11 @@ async function handleMapsCommand(interaction: any): Promise<void> {
     await replyInteraction(
       interaction.id,
       interaction.token,
-      cv2([container([text("❌ L'API Brawl Stars est indisponible. Réessaie dans quelques instants.")], BRAWL_ACCENT)]),
+      cv2([container([
+        text("# ⚠️ Brawl Stars"),
+        sep(),
+        text("L'API Brawl Stars est indisponible.\nRéessaie dans quelques instants."),
+      ], BRAWL_ACCENT)]),
       true,
     );
     return;
@@ -242,7 +262,11 @@ async function handleMapsCommand(interaction: any): Promise<void> {
       await replyInteraction(
         interaction.id,
         interaction.token,
-        cv2([container([text("❌ Cet événement n'est plus en cours.")], BRAWL_ACCENT)]),
+        cv2([container([
+          text("# ❌ Événement introuvable"),
+          sep(),
+          text("Cet événement n'est plus en cours. Relance `/maps` pour voir la rotation à jour."),
+        ], BRAWL_ACCENT)]),
         true,
       );
       return;
