@@ -6,4 +6,4 @@ Disallow: /players-login
 Disallow: /roster/
 Disallow: /matcherino/
 
-Sitemap: https://void-esport.com/sitemap.xml
+Sitemap: https://void.meonix.me/sitemap.xml
