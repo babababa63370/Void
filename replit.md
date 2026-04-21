@@ -132,8 +132,18 @@ Express 5 server sur le port 8080, chemins proxifiés via `/api`.
   - Sans argument : message descriptif + **StringSelect** listant les événements actifs
   - `event:<id>` : détail de la map (image via gallery, mode, horaires start/end)
   - **Autocomplete** en direct sur le nom du mode et de la map (aucune mise à jour manuelle nécessaire)
+- **Modération** (Discord natif, options USER/CHANNEL/STRING/INTEGER, `default_member_permissions` par permission Discord adaptée) :
+  - **`/ban`** — `user`, `reason?`, `delete_days?` (0-7). DM au membre, PUT `/guilds/{id}/bans/{user}`.
+  - **`/unban`** — `user_id` (string), `reason?`. DELETE `/guilds/{id}/bans/{user}`. Pas de DM (utilisateur absent).
+  - **`/kick`** — `user`, `reason?`. DM puis DELETE `/guilds/{id}/members/{user}`.
+  - **`/mute`** — `user`, `duration`, `unit` (m/h/d), `reason?`. DM puis PATCH `communication_disabled_until` (timeout Discord, cappé à 28 jours).
+  - **`/demute`** — `user`, `reason?`. DM puis PATCH `communication_disabled_until: null`.
+  - **`/move`** — `user`, `channel` (voice/stage), `reason?`. DM puis PATCH `channel_id`.
+  - Toutes les réponses utilisent **cv2** (`replySuccess`/`replyError`). Le résultat indique si le MP a bien été délivré.
+  - Toutes les actions (succès et échecs) sont **loguées** dans `moderation_logs` puis affichées sur `/staff/moderation/logs`.
 - Handler d'interaction dispatche sur 3 types : `ApplicationCommand`, `ApplicationCommandAutocomplete`, `MessageComponent` (pour le select `maps_select`).
 - Helpers `cv2.ts` : `stringSelect()`, `respondAutocomplete()`, `actionRow()` accepte boutons **ou** select menus.
+- Helpers `moderation.ts` : `banUser/unbanUser/kickUser/timeoutUser/moveUser`, `sendDM()`, `logModeration()`, templates DM (`dmBan`/`dmKick`/`dmMute`/`dmUnmute`/`dmMove`).
 
 ### Matcherino Card
 - Générée par `src/lib/matcherinoCard.ts` via sharp (SVG → PNG 1200×630)
@@ -189,7 +199,8 @@ Express 5 server sur le port 8080, chemins proxifiés via `/api`.
 - `src/routes/staff.ts` — liste des membres
 - `src/routes/bot.ts` — status + presence
 - `src/routes/admin.ts` — routes admin
-- `src/lib/bot.ts` — service discord.js + handlers `/event` et `/maps`
+- `src/lib/bot.ts` — service discord.js + handlers `/event`, `/maps`, `/ban`, `/unban`, `/kick`, `/mute`, `/demute`, `/move`
+- `src/lib/moderation.ts` — actions REST Discord (ban/unban/kick/timeout/move), `sendDM()`, `logModeration()`, templates DM cv2
 - `src/lib/brawlEvents.ts` — client API Brawl Stars (rotation + cache + parsing timestamps non-ISO)
 - `src/lib/matcherinoCard.ts` — génération PNG des cartes tournoi
 - `src/lib/autoAnnounce.ts` — service d'annonce automatique (exporte `PING_ID`)

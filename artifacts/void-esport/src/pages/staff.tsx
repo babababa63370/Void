@@ -5,7 +5,7 @@ import {
   Crown, Crosshair, UserCheck, ExternalLink,
   Loader2, ChevronRight, Wifi, WifiOff, Radio, Save, Clock,
   Trophy, Calendar, FlaskConical, Send, RefreshCw, Hash, ToggleLeft, ToggleRight, CheckCircle2, AlertCircle,
-  Terminal,
+  Terminal, Gavel, Ban, UserX, VolumeX, Volume2, Move,
 } from "lucide-react";
 import { SiDiscord, SiTwitch } from "react-icons/si";
 import { Link, useLocation } from "wouter";
@@ -43,6 +43,12 @@ const NAV_GROUPS = [
       { path: "/staff/bot", label: "Overview", icon: LayoutDashboard, category: "Bot Panel" },
       { path: "/staff/bot/commandes", label: "Commandes", icon: Terminal, category: "Bot Panel" },
       { path: "/staff/matcherino", label: "Matcherino", icon: Trophy, category: "Bot Panel" },
+    ],
+  },
+  {
+    category: "Modération",
+    items: [
+      { path: "/staff/moderation/logs", label: "Logs", icon: Gavel, category: "Modération" },
     ],
   },
 ];
@@ -399,6 +405,218 @@ function CommandesPage({ token }: { token: string }) {
                 </div>
               </div>
             ))
+          )}
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+// ─── Moderation Logs ──────────────────────────────────────────────────────────
+interface ModerationLog {
+  id: number;
+  action: string;
+  guildId: string | null;
+  targetId: string;
+  targetUsername: string | null;
+  moderatorId: string;
+  moderatorUsername: string | null;
+  reason: string | null;
+  durationSec: string | null;
+  extra: Record<string, any> | null;
+  dmDelivered: string | null;
+  success: string;
+  errorMessage: string | null;
+  createdAt: string;
+}
+
+const ACTION_META: Record<string, { label: string; icon: any; color: string; bg: string }> = {
+  ban:    { label: "Ban",     icon: Ban,      color: "text-red-400",     bg: "bg-red-500/10 border-red-500/30" },
+  unban:  { label: "Unban",   icon: UserCheck,color: "text-green-400",   bg: "bg-green-500/10 border-green-500/30" },
+  kick:   { label: "Kick",    icon: UserX,    color: "text-orange-400",  bg: "bg-orange-500/10 border-orange-500/30" },
+  mute:   { label: "Mute",    icon: VolumeX,  color: "text-yellow-400",  bg: "bg-yellow-500/10 border-yellow-500/30" },
+  unmute: { label: "Unmute",  icon: Volume2,  color: "text-green-400",   bg: "bg-green-500/10 border-green-500/30" },
+  move:   { label: "Move",    icon: Move,     color: "text-cyan-400",    bg: "bg-cyan-500/10 border-cyan-500/30" },
+};
+
+const ACTION_FILTERS = ["all", "ban", "unban", "kick", "mute", "unmute", "move"] as const;
+
+function formatDuration(sec: string | null): string | null {
+  if (!sec) return null;
+  const s = Number(sec);
+  if (!isFinite(s) || s <= 0) return null;
+  if (s >= 86400) return `${Math.round(s / 86400)}j`;
+  if (s >= 3600) return `${Math.round(s / 3600)}h`;
+  if (s >= 60) return `${Math.round(s / 60)}min`;
+  return `${s}s`;
+}
+
+function formatDate(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString("fr-FR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function ModerationLogsPage({ token }: { token: string }) {
+  const [logs, setLogs] = useState<ModerationLog[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<(typeof ACTION_FILTERS)[number]>("all");
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    const qs = new URLSearchParams({ limit: "100", action: filter });
+    fetch(`/api/moderation/logs?${qs.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (r) => {
+        if (!r.ok) throw new Error("fetch_failed");
+        return r.json() as Promise<{ logs: ModerationLog[]; total: number }>;
+      })
+      .then((data) => { setLogs(data.logs); setTotal(data.total); })
+      .catch(() => setError("Impossible de charger les logs"))
+      .finally(() => setLoading(false));
+  }, [token, filter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center justify-center">
+            <Gavel className="w-5 h-5 text-red-400" />
+          </div>
+          <div>
+            <h2 className="font-orbitron font-black text-lg uppercase tracking-widest text-white">Logs de modération</h2>
+            <p className="text-xs text-muted-foreground/60 font-mono">{total} action{total > 1 ? "s" : ""} enregistrée{total > 1 ? "s" : ""}</p>
+          </div>
+        </div>
+        <button
+          onClick={load}
+          className="flex items-center gap-2 px-3 py-2 text-xs font-mono text-muted-foreground hover:text-foreground border border-white/10 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Rafraîchir
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2">
+        {ACTION_FILTERS.map((f) => {
+          const meta = f === "all" ? null : ACTION_META[f];
+          const active = filter === f;
+          const Icon = meta?.icon ?? Hash;
+          return (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-mono uppercase tracking-wider border transition-colors ${
+                active
+                  ? "bg-primary/10 border-primary/40 text-primary"
+                  : "border-white/10 text-muted-foreground hover:border-white/20 hover:text-foreground"
+              }`}
+            >
+              <Icon className="w-3.5 h-3.5" />
+              {f === "all" ? "Tout" : meta?.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {loading && (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="flex items-center gap-2 px-4 py-3 border border-red-500/30 bg-red-500/5 text-red-400 text-sm">
+          <AlertCircle className="w-4 h-4" /> {error}
+        </div>
+      )}
+
+      {logs && !loading && (
+        <div className="space-y-2">
+          {logs.length === 0 ? (
+            <p className="text-muted-foreground/40 text-sm font-mono py-8 text-center">Aucun log pour ce filtre.</p>
+          ) : (
+            logs.map((log) => {
+              const meta = ACTION_META[log.action] ?? { label: log.action, icon: Hash, color: "text-white", bg: "bg-white/5 border-white/10" };
+              const Icon = meta.icon;
+              const duration = formatDuration(log.durationSec);
+              const failed = log.success !== "yes";
+              return (
+                <div
+                  key={log.id}
+                  className={`border ${failed ? "border-red-500/40 bg-red-500/5" : "border-white/5 bg-white/[0.02]"} p-4 space-y-2`}
+                >
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <div className="flex items-center gap-2">
+                      <div className={`w-8 h-8 rounded-md border flex items-center justify-center ${meta.bg}`}>
+                        <Icon className={`w-4 h-4 ${meta.color}`} />
+                      </div>
+                      <span className={`text-xs font-orbitron uppercase tracking-widest ${meta.color}`}>
+                        {meta.label}
+                      </span>
+                      {duration && (
+                        <span className="text-[10px] font-mono text-muted-foreground/60 px-2 py-0.5 rounded border border-white/10">
+                          {duration}
+                        </span>
+                      )}
+                      {failed && (
+                        <span className="text-[10px] font-mono text-red-400 px-2 py-0.5 rounded border border-red-500/40">
+                          ÉCHEC
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] font-mono text-muted-foreground/50">
+                      {formatDate(log.createdAt)}
+                    </span>
+                  </div>
+
+                  <div className="grid sm:grid-cols-2 gap-y-1 gap-x-4 text-xs">
+                    <div>
+                      <span className="text-muted-foreground/40 font-mono">Cible&nbsp;: </span>
+                      <span className="text-white">{log.targetUsername ?? "—"}</span>
+                      <span className="text-muted-foreground/40 font-mono ml-1">({log.targetId})</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground/40 font-mono">Modérateur&nbsp;: </span>
+                      <span className="text-white">{log.moderatorUsername ?? "—"}</span>
+                      <span className="text-muted-foreground/40 font-mono ml-1">({log.moderatorId})</span>
+                    </div>
+                  </div>
+
+                  {log.reason && (
+                    <div className="text-xs">
+                      <span className="text-muted-foreground/40 font-mono">Raison&nbsp;: </span>
+                      <span className="text-white/90">{log.reason}</span>
+                    </div>
+                  )}
+
+                  <div className="flex flex-wrap items-center gap-3 text-[11px] font-mono pt-1">
+                    {log.dmDelivered && log.dmDelivered !== "na" && (
+                      <span className={log.dmDelivered === "yes" ? "text-green-400" : "text-orange-400"}>
+                        MP&nbsp;: {log.dmDelivered === "yes" ? "✅ envoyé" : "❌ non reçu"}
+                      </span>
+                    )}
+                    {log.extra?.channelName && (
+                      <span className="text-cyan-400">→ #{log.extra.channelName}</span>
+                    )}
+                    {log.extra?.deleteDays ? (
+                      <span className="text-muted-foreground/60">Messages&nbsp;: {log.extra.deleteDays}j</span>
+                    ) : null}
+                    {log.errorMessage && (
+                      <span className="text-red-400 truncate max-w-full">Erreur&nbsp;: {log.errorMessage}</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })
           )}
         </div>
       )}
@@ -1140,6 +1358,7 @@ export default function Staff() {
     if (location.startsWith("/staff/matcherino")) return <MatcherinoPage token={session!.token} />;
     if (location.startsWith("/staff/bot/commandes")) return <CommandesPage token={session!.token} />;
     if (location.startsWith("/staff/bot")) return <BotPage token={session!.token} />;
+    if (location.startsWith("/staff/moderation/logs")) return <ModerationLogsPage token={session!.token} />;
     return <Overview session={session!} isAdmin={isAdmin} />;
   }
 

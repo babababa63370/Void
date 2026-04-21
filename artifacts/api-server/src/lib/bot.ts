@@ -18,6 +18,13 @@ import {
   getBrawlRotation, getActiveEvents, parseApiTime, prettyMode,
   type BrawlEvent,
 } from "./brawlEvents.js";
+import {
+  banUser, unbanUser, kickUser, timeoutUser, moveUser,
+  sendDM, logModeration,
+  dmBan, dmKick, dmMute, dmUnmute, dmMove,
+  replySuccess, replyError,
+  ACCENT_RED, ACCENT_ORANGE, ACCENT_GREEN,
+} from "./moderation.js";
 
 // ─── Presence ─────────────────────────────────────────────────────────────────
 
@@ -68,10 +75,84 @@ export const SLASH_COMMANDS = [
       {
         name: "event",
         description: "Pick a specific event to view its map",
-        type: 3, // STRING
+        type: 3,
         required: false,
         autocomplete: true,
       },
+    ],
+  },
+  {
+    name: "ban",
+    description: "Bannir un membre du serveur",
+    default_member_permissions: "4", // BAN_MEMBERS
+    dm_permission: false,
+    options: [
+      { name: "user", description: "Utilisateur à bannir", type: 6, required: true },
+      { name: "reason", description: "Raison du ban", type: 3, required: false },
+      { name: "delete_days", description: "Supprimer N jours de messages (0-7)", type: 4, required: false, min_value: 0, max_value: 7 },
+    ],
+  },
+  {
+    name: "unban",
+    description: "Débannir un utilisateur par son ID",
+    default_member_permissions: "4",
+    dm_permission: false,
+    options: [
+      { name: "user_id", description: "ID Discord de l'utilisateur", type: 3, required: true },
+      { name: "reason", description: "Raison du débannissement", type: 3, required: false },
+    ],
+  },
+  {
+    name: "kick",
+    description: "Expulser un membre du serveur",
+    default_member_permissions: "2", // KICK_MEMBERS
+    dm_permission: false,
+    options: [
+      { name: "user", description: "Utilisateur à expulser", type: 6, required: true },
+      { name: "reason", description: "Raison", type: 3, required: false },
+    ],
+  },
+  {
+    name: "mute",
+    description: "Rendre un membre muet (timeout)",
+    default_member_permissions: "1099511627776", // MODERATE_MEMBERS
+    dm_permission: false,
+    options: [
+      { name: "user", description: "Utilisateur à muter", type: 6, required: true },
+      { name: "duration", description: "Durée", type: 4, required: true, min_value: 1 },
+      {
+        name: "unit",
+        description: "Unité de durée",
+        type: 3,
+        required: true,
+        choices: [
+          { name: "minutes", value: "m" },
+          { name: "heures", value: "h" },
+          { name: "jours", value: "d" },
+        ],
+      },
+      { name: "reason", description: "Raison", type: 3, required: false },
+    ],
+  },
+  {
+    name: "demute",
+    description: "Retirer le mute d'un membre",
+    default_member_permissions: "1099511627776",
+    dm_permission: false,
+    options: [
+      { name: "user", description: "Utilisateur à démuter", type: 6, required: true },
+      { name: "reason", description: "Raison", type: 3, required: false },
+    ],
+  },
+  {
+    name: "move",
+    description: "Déplacer un membre dans un autre salon vocal",
+    default_member_permissions: "16777216", // MOVE_MEMBERS
+    dm_permission: false,
+    options: [
+      { name: "user", description: "Utilisateur à déplacer", type: 6, required: true },
+      { name: "channel", description: "Salon vocal de destination", type: 7, required: true, channel_types: [2, 13] },
+      { name: "reason", description: "Raison", type: 3, required: false },
     ],
   },
 ];
@@ -346,11 +427,265 @@ async function handleMapsSelect(interaction: any): Promise<void> {
   await replyInteraction(interaction.id, interaction.token, buildMapDetail(found), true);
 }
 
+// ─── Moderation handlers ─────────────────────────────────────────────────────
+
+function getOpt(interaction: any, name: string): any {
+  return interaction.options?.get?.(name) ?? null;
+}
+
+function getStr(interaction: any, name: string): string | null {
+  try { return interaction.options?.getString?.(name) ?? null; } catch { return null; }
+}
+function getInt(interaction: any, name: string): number | null {
+  try { return interaction.options?.getInteger?.(name) ?? null; } catch { return null; }
+}
+function getUser(interaction: any, name: string): { id: string; username: string; tag: string } | null {
+  try {
+    const u = interaction.options?.getUser?.(name);
+    if (!u) return null;
+    return { id: u.id, username: u.username ?? "unknown", tag: u.tag ?? u.username ?? u.id };
+  } catch { return null; }
+}
+function getChannel(interaction: any, name: string): { id: string; name: string } | null {
+  try {
+    const c = interaction.options?.getChannel?.(name);
+    if (!c) return null;
+    return { id: c.id, name: c.name ?? "channel" };
+  } catch { return null; }
+}
+
+async function handleBanCommand(interaction: any): Promise<void> {
+  const guildId: string | null = interaction.guildId;
+  const target = getUser(interaction, "user");
+  const reason = getStr(interaction, "reason");
+  const deleteDays = getInt(interaction, "delete_days") ?? 0;
+  if (!guildId || !target) {
+    return void (await replyInteraction(interaction.id, interaction.token, replyError("Ban impossible", "Commande utilisable uniquement dans un serveur."), true));
+  }
+  const moderator = { id: interaction.user.id, username: interaction.user.username };
+
+  // DM first (user must still be in guild)
+  const dm = await sendDM(target.id, dmBan(reason));
+
+  try {
+    await banUser(guildId, target.id, reason, deleteDays * 86400);
+    await logModeration({
+      action: "ban", guildId, targetId: target.id, targetUsername: target.tag,
+      moderatorId: moderator.id, moderatorUsername: moderator.username,
+      reason, dmDelivered: dm ? "yes" : "no", success: "yes",
+      extra: { deleteDays },
+    });
+    await replyInteraction(interaction.id, interaction.token, replySuccess("🔨 Membre banni", [
+      `**Membre** — <@${target.id}> (${target.tag})`,
+      `**Raison** — ${reason ?? "—"}`,
+      `**Messages supprimés** — ${deleteDays} jour${deleteDays > 1 ? "s" : ""}`,
+      `**MP envoyé** — ${dm ? "✅" : "❌ (MP fermés)"}`,
+    ], ACCENT_RED));
+  } catch (err) {
+    await logModeration({
+      action: "ban", guildId, targetId: target.id, targetUsername: target.tag,
+      moderatorId: moderator.id, moderatorUsername: moderator.username,
+      reason, dmDelivered: dm ? "yes" : "no", success: "no",
+      errorMessage: err instanceof Error ? err.message : String(err),
+    });
+    await replyInteraction(interaction.id, interaction.token, replyError("Ban échoué", err instanceof Error ? err.message : "Erreur inconnue"), true);
+  }
+}
+
+async function handleUnbanCommand(interaction: any): Promise<void> {
+  const guildId: string | null = interaction.guildId;
+  const userId = getStr(interaction, "user_id");
+  const reason = getStr(interaction, "reason");
+  if (!guildId || !userId) {
+    return void (await replyInteraction(interaction.id, interaction.token, replyError("Unban impossible", "Arguments manquants."), true));
+  }
+  const moderator = { id: interaction.user.id, username: interaction.user.username };
+  try {
+    await unbanUser(guildId, userId, reason);
+    await logModeration({
+      action: "unban", guildId, targetId: userId, targetUsername: null,
+      moderatorId: moderator.id, moderatorUsername: moderator.username,
+      reason, dmDelivered: "na", success: "yes",
+    });
+    await replyInteraction(interaction.id, interaction.token, replySuccess("✅ Utilisateur débanni", [
+      `**ID** — \`${userId}\``,
+      `**Raison** — ${reason ?? "—"}`,
+    ], ACCENT_GREEN));
+  } catch (err) {
+    await logModeration({
+      action: "unban", guildId, targetId: userId, targetUsername: null,
+      moderatorId: moderator.id, moderatorUsername: moderator.username,
+      reason, dmDelivered: "na", success: "no",
+      errorMessage: err instanceof Error ? err.message : String(err),
+    });
+    await replyInteraction(interaction.id, interaction.token, replyError("Unban échoué", err instanceof Error ? err.message : "Erreur inconnue"), true);
+  }
+}
+
+async function handleKickCommand(interaction: any): Promise<void> {
+  const guildId: string | null = interaction.guildId;
+  const target = getUser(interaction, "user");
+  const reason = getStr(interaction, "reason");
+  if (!guildId || !target) {
+    return void (await replyInteraction(interaction.id, interaction.token, replyError("Kick impossible", "Commande utilisable uniquement dans un serveur."), true));
+  }
+  const moderator = { id: interaction.user.id, username: interaction.user.username };
+
+  const dm = await sendDM(target.id, dmKick(reason));
+
+  try {
+    await kickUser(guildId, target.id, reason);
+    await logModeration({
+      action: "kick", guildId, targetId: target.id, targetUsername: target.tag,
+      moderatorId: moderator.id, moderatorUsername: moderator.username,
+      reason, dmDelivered: dm ? "yes" : "no", success: "yes",
+    });
+    await replyInteraction(interaction.id, interaction.token, replySuccess("👢 Membre expulsé", [
+      `**Membre** — <@${target.id}> (${target.tag})`,
+      `**Raison** — ${reason ?? "—"}`,
+      `**MP envoyé** — ${dm ? "✅" : "❌"}`,
+    ], ACCENT_ORANGE));
+  } catch (err) {
+    await logModeration({
+      action: "kick", guildId, targetId: target.id, targetUsername: target.tag,
+      moderatorId: moderator.id, moderatorUsername: moderator.username,
+      reason, dmDelivered: dm ? "yes" : "no", success: "no",
+      errorMessage: err instanceof Error ? err.message : String(err),
+    });
+    await replyInteraction(interaction.id, interaction.token, replyError("Kick échoué", err instanceof Error ? err.message : "Erreur inconnue"), true);
+  }
+}
+
+async function handleMuteCommand(interaction: any): Promise<void> {
+  const guildId: string | null = interaction.guildId;
+  const target = getUser(interaction, "user");
+  const duration = getInt(interaction, "duration");
+  const unit = getStr(interaction, "unit");
+  const reason = getStr(interaction, "reason");
+  if (!guildId || !target || !duration || !unit) {
+    return void (await replyInteraction(interaction.id, interaction.token, replyError("Mute impossible", "Arguments manquants."), true));
+  }
+  const multipliers: Record<string, number> = { m: 60, h: 3600, d: 86400 };
+  const seconds = duration * (multipliers[unit] ?? 60);
+  // Discord caps timeout at 28 days
+  const maxSeconds = 28 * 86400;
+  const cappedSeconds = Math.min(seconds, maxSeconds);
+  const untilMs = Date.now() + cappedSeconds * 1000;
+  const untilIso = new Date(untilMs).toISOString();
+  const untilUnix = Math.floor(untilMs / 1000);
+
+  const moderator = { id: interaction.user.id, username: interaction.user.username };
+  const dm = await sendDM(target.id, dmMute(untilUnix, reason));
+
+  try {
+    await timeoutUser(guildId, target.id, untilIso, reason);
+    await logModeration({
+      action: "mute", guildId, targetId: target.id, targetUsername: target.tag,
+      moderatorId: moderator.id, moderatorUsername: moderator.username,
+      reason, durationSec: String(cappedSeconds),
+      dmDelivered: dm ? "yes" : "no", success: "yes",
+      extra: { duration, unit, untilIso },
+    });
+    await replyInteraction(interaction.id, interaction.token, replySuccess("🔇 Membre muet", [
+      `**Membre** — <@${target.id}> (${target.tag})`,
+      `**Durée** — ${duration} ${unit === "m" ? "minute(s)" : unit === "h" ? "heure(s)" : "jour(s)"}`,
+      `**Jusqu'au** — <t:${untilUnix}:F> (<t:${untilUnix}:R>)`,
+      `**Raison** — ${reason ?? "—"}`,
+      `**MP envoyé** — ${dm ? "✅" : "❌"}`,
+    ], ACCENT_ORANGE));
+  } catch (err) {
+    await logModeration({
+      action: "mute", guildId, targetId: target.id, targetUsername: target.tag,
+      moderatorId: moderator.id, moderatorUsername: moderator.username,
+      reason, durationSec: String(cappedSeconds),
+      dmDelivered: dm ? "yes" : "no", success: "no",
+      errorMessage: err instanceof Error ? err.message : String(err),
+    });
+    await replyInteraction(interaction.id, interaction.token, replyError("Mute échoué", err instanceof Error ? err.message : "Erreur inconnue"), true);
+  }
+}
+
+async function handleDemuteCommand(interaction: any): Promise<void> {
+  const guildId: string | null = interaction.guildId;
+  const target = getUser(interaction, "user");
+  const reason = getStr(interaction, "reason");
+  if (!guildId || !target) {
+    return void (await replyInteraction(interaction.id, interaction.token, replyError("Démute impossible", "Arguments manquants."), true));
+  }
+  const moderator = { id: interaction.user.id, username: interaction.user.username };
+  const dm = await sendDM(target.id, dmUnmute(reason));
+
+  try {
+    await timeoutUser(guildId, target.id, null, reason);
+    await logModeration({
+      action: "unmute", guildId, targetId: target.id, targetUsername: target.tag,
+      moderatorId: moderator.id, moderatorUsername: moderator.username,
+      reason, dmDelivered: dm ? "yes" : "no", success: "yes",
+    });
+    await replyInteraction(interaction.id, interaction.token, replySuccess("🔊 Mute retiré", [
+      `**Membre** — <@${target.id}> (${target.tag})`,
+      `**Raison** — ${reason ?? "—"}`,
+      `**MP envoyé** — ${dm ? "✅" : "❌"}`,
+    ], ACCENT_GREEN));
+  } catch (err) {
+    await logModeration({
+      action: "unmute", guildId, targetId: target.id, targetUsername: target.tag,
+      moderatorId: moderator.id, moderatorUsername: moderator.username,
+      reason, dmDelivered: dm ? "yes" : "no", success: "no",
+      errorMessage: err instanceof Error ? err.message : String(err),
+    });
+    await replyInteraction(interaction.id, interaction.token, replyError("Démute échoué", err instanceof Error ? err.message : "Erreur inconnue"), true);
+  }
+}
+
+async function handleMoveCommand(interaction: any): Promise<void> {
+  const guildId: string | null = interaction.guildId;
+  const target = getUser(interaction, "user");
+  const channel = getChannel(interaction, "channel");
+  const reason = getStr(interaction, "reason");
+  if (!guildId || !target || !channel) {
+    return void (await replyInteraction(interaction.id, interaction.token, replyError("Move impossible", "Arguments manquants."), true));
+  }
+  const moderator = { id: interaction.user.id, username: interaction.user.username };
+  const dm = await sendDM(target.id, dmMove(channel.name, reason));
+
+  try {
+    await moveUser(guildId, target.id, channel.id, reason);
+    await logModeration({
+      action: "move", guildId, targetId: target.id, targetUsername: target.tag,
+      moderatorId: moderator.id, moderatorUsername: moderator.username,
+      reason, dmDelivered: dm ? "yes" : "no", success: "yes",
+      extra: { channelId: channel.id, channelName: channel.name },
+    });
+    await replyInteraction(interaction.id, interaction.token, replySuccess("🎧 Membre déplacé", [
+      `**Membre** — <@${target.id}> (${target.tag})`,
+      `**Salon** — <#${channel.id}>`,
+      `**Raison** — ${reason ?? "—"}`,
+      `**MP envoyé** — ${dm ? "✅" : "❌"}`,
+    ], ACCENT_ORANGE));
+  } catch (err) {
+    await logModeration({
+      action: "move", guildId, targetId: target.id, targetUsername: target.tag,
+      moderatorId: moderator.id, moderatorUsername: moderator.username,
+      reason, dmDelivered: dm ? "yes" : "no", success: "no",
+      errorMessage: err instanceof Error ? err.message : String(err),
+      extra: { channelId: channel.id, channelName: channel.name },
+    });
+    await replyInteraction(interaction.id, interaction.token, replyError("Move échoué", err instanceof Error ? err.message : "Erreur inconnue\n-# Le membre doit être dans un salon vocal."), true);
+  }
+}
+
 client.on(Events.InteractionCreate, async (interaction) => {
   try {
     if (interaction.type === InteractionType.ApplicationCommand) {
       if (interaction.commandName === "event") return void (await handleEventCommand(interaction));
       if (interaction.commandName === "maps") return void (await handleMapsCommand(interaction));
+      if (interaction.commandName === "ban") return void (await handleBanCommand(interaction));
+      if (interaction.commandName === "unban") return void (await handleUnbanCommand(interaction));
+      if (interaction.commandName === "kick") return void (await handleKickCommand(interaction));
+      if (interaction.commandName === "mute") return void (await handleMuteCommand(interaction));
+      if (interaction.commandName === "demute") return void (await handleDemuteCommand(interaction));
+      if (interaction.commandName === "move") return void (await handleMoveCommand(interaction));
       return;
     }
     if (interaction.type === InteractionType.ApplicationCommandAutocomplete) {

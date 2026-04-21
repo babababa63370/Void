@@ -1,7 +1,7 @@
 import { Router, type IRouter } from "express";
-import { db, playerLoginsTable } from "@workspace/db";
+import { db, playerLoginsTable, moderationLogsTable } from "@workspace/db";
 import { jwtVerify } from "jose";
-import { sql } from "drizzle-orm";
+import { sql, desc, eq, and } from "drizzle-orm";
 import { getBotInfo, setBotPresence, SLASH_COMMANDS, type BotPresence, type BotStatus, type ActivityKind } from "../lib/bot.js";
 
 const router: IRouter = Router();
@@ -46,6 +46,26 @@ router.get("/bot/status", async (req, res) => {
 router.get("/bot/commands", async (req, res) => {
   if (!await requireStaff(req, res)) return;
   res.json({ commands: SLASH_COMMANDS });
+});
+
+// GET /api/moderation/logs?action=&limit=&offset=
+router.get("/moderation/logs", async (req, res) => {
+  if (!await requireStaff(req, res)) return;
+  const limit = Math.min(Number(req.query.limit ?? 50), 200);
+  const offset = Math.max(Number(req.query.offset ?? 0), 0);
+  const action = typeof req.query.action === "string" && req.query.action !== "all" ? req.query.action : null;
+
+  const where = action ? eq(moderationLogsTable.action, action) : undefined;
+  const rows = await db
+    .select()
+    .from(moderationLogsTable)
+    .where(where)
+    .orderBy(desc(moderationLogsTable.createdAt))
+    .limit(limit)
+    .offset(offset);
+
+  const countRows = await db.select({ c: sql<number>`count(*)::int` }).from(moderationLogsTable).where(where);
+  res.json({ logs: rows, total: countRows[0]?.c ?? 0 });
 });
 
 // PATCH /api/bot/presence
