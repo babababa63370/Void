@@ -1,47 +1,88 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
     <loc>https://void.meonix.me/</loc>
+    <lastmod>2026-04-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>https://void.meonix.me/roster</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://void.meonix.me/" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://void.meonix.me/fr/" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://void.meonix.me/es/" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://void.meonix.me/de/" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://void.meonix.me/pt/" />
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://void.meonix.me/" />
   </url>
   <url>
     <loc>https://void.meonix.me/about</loc>
+    <lastmod>2026-04-21</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://void.meonix.me/about" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://void.meonix.me/fr/about" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://void.meonix.me/es/about" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://void.meonix.me/de/about" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://void.meonix.me/pt/about" />
+  </url>
+  <url>
+    <loc>https://void.meonix.me/roster</loc>
+    <lastmod>2026-04-21</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://void.meonix.me/roster" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://void.meonix.me/fr/roster" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://void.meonix.me/es/roster" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://void.meonix.me/de/roster" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://void.meonix.me/pt/roster" />
   </url>
   <url>
     <loc>https://void.meonix.me/achievements</loc>
+    <lastmod>2026-04-21</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://void.meonix.me/achievements" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://void.meonix.me/fr/achievements" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://void.meonix.me/es/achievements" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://void.meonix.me/de/achievements" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://void.meonix.me/pt/achievements" />
   </url>
   <url>
     <loc>https://void.meonix.me/matcherino</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
+    <lastmod>2026-04-21</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>0.9</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://void.meonix.me/matcherino" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://void.meonix.me/fr/matcherino" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://void.meonix.me/es/matcherino" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://void.meonix.me/de/matcherino" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://void.meonix.me/pt/matcherino" />
   </url>
   <url>
     <loc>https://void.meonix.me/join</loc>
+    <lastmod>2026-04-21</lastmod>
     <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
+    <priority>0.8</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://void.meonix.me/join" />
+    <xhtml:link rel="alternate" hreflang="fr" href="https://void.meonix.me/fr/join" />
+    <xhtml:link rel="alternate" hreflang="es" href="https://void.meonix.me/es/join" />
+    <xhtml:link rel="alternate" hreflang="de" href="https://void.meonix.me/de/join" />
+    <xhtml:link rel="alternate" hreflang="pt" href="https://void.meonix.me/pt/join" />
   </url>
   <url>
     <loc>https://void.meonix.me/rules</loc>
+    <lastmod>2026-04-21</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://void.meonix.me/terms</loc>
+    <lastmod>2026-04-21</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://void.meonix.me/privacy</loc>
+    <lastmod>2026-04-21</lastmod>
     <changefreq>yearly</changefreq>
     <priority>0.3</priority>
   </url>

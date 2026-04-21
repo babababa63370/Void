@@ -10,8 +10,9 @@ import { usePageMeta } from "@/hooks/usePageMeta";
 export default function Home() {
   const { t } = useI18n();
   usePageMeta({
-    title: "Embrace The Void",
-    description: "The premier competitive Brawl Stars community. No mercy. No retreat. Only absolute dominance.",
+    title: "Competitive Brawl Stars Clan",
+    description:
+      "VOID Esport is a competitive Brawl Stars esports clan with three divisions — Alpha, Omega, and Nexus. Tournaments, rankings, and an elite community. Embrace The Void.",
   });
 
   return (

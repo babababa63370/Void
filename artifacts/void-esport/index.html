@@ -3,9 +3,23 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5" />
-    <title>VOID Esport — Embrace The Void</title>
-    <meta name="description" content="VOID Esport — Competitive Brawl Stars clan. Alpha, Omega & Nexus divisions. Join the elite." />
     <meta name="theme-color" content="#7c3aed" />
+
+    <title>VOID Esport — Competitive Brawl Stars Clan | Embrace The Void</title>
+    <meta name="description" content="VOID Esport is a competitive Brawl Stars esports clan with three divisions — Alpha, Omega, and Nexus. Tournaments, rankings, and an elite community. Embrace The Void." />
+    <meta name="keywords" content="VOID Esport, Brawl Stars, esport clan, competitive Brawl Stars, Brawl Stars team, Brawl Stars tournaments, Matcherino, Alpha, Omega, Nexus, Meonix" />
+    <meta name="author" content="Meonix" />
+    <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1" />
+    <meta name="googlebot" content="index, follow" />
+
+    <!-- Canonical + hreflang -->
+    <link rel="canonical" href="https://void.meonix.me/" />
+    <link rel="alternate" hreflang="en" href="https://void.meonix.me/" />
+    <link rel="alternate" hreflang="fr" href="https://void.meonix.me/fr/" />
+    <link rel="alternate" hreflang="es" href="https://void.meonix.me/es/" />
+    <link rel="alternate" hreflang="de" href="https://void.meonix.me/de/" />
+    <link rel="alternate" hreflang="pt" href="https://void.meonix.me/pt/" />
+    <link rel="alternate" hreflang="x-default" href="https://void.meonix.me/" />
 
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="/favicon.png?v=2" />
@@ -14,21 +28,77 @@
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="VOID Esport — Embrace The Void" />
-    <meta property="og:description" content="Competitive Brawl Stars clan. Alpha, Omega & Nexus divisions. Join the elite." />
-    <meta property="og:image" content="/logo.png" />
-    <meta property="og:image:alt" content="VOID Esport logo" />
+    <meta property="og:site_name" content="VOID Esport" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:locale:alternate" content="fr_FR" />
+    <meta property="og:locale:alternate" content="es_ES" />
+    <meta property="og:locale:alternate" content="de_DE" />
+    <meta property="og:locale:alternate" content="pt_PT" />
+    <meta property="og:url" content="https://void.meonix.me/" />
+    <meta property="og:title" content="VOID Esport — Competitive Brawl Stars Clan" />
+    <meta property="og:description" content="Competitive Brawl Stars esports clan. Tournaments, rankings, three divisions. Embrace The Void." />
+    <meta property="og:image" content="https://void.meonix.me/opengraph.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="VOID Esport — Competitive Brawl Stars clan" />
 
     <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="VOID Esport" />
-    <meta name="twitter:description" content="Competitive Brawl Stars clan. Embrace The Void." />
-    <meta name="twitter:image" content="/logo.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="VOID Esport — Competitive Brawl Stars Clan" />
+    <meta name="twitter:description" content="Competitive Brawl Stars esports clan. Tournaments, rankings, three divisions. Embrace The Void." />
+    <meta name="twitter:image" content="https://void.meonix.me/opengraph.jpg" />
+    <meta name="twitter:image:alt" content="VOID Esport — Competitive Brawl Stars clan" />
 
-    <!-- Fonts -->
+    <!-- Performance hints -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://images.unsplash.com" />
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Structured data: Organization / SportsTeam / WebSite -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "Organization",
+          "@id": "https://void.meonix.me/#organization",
+          "name": "VOID Esport",
+          "alternateName": "VOID",
+          "url": "https://void.meonix.me/",
+          "logo": "https://void.meonix.me/logo.png",
+          "image": "https://void.meonix.me/opengraph.jpg",
+          "description": "Competitive Brawl Stars esports clan with three divisions — Alpha, Omega, and Nexus.",
+          "founder": { "@type": "Person", "name": "Meonix" },
+          "sameAs": [
+            "https://discord.gg/gr9GTEJWWU"
+          ]
+        },
+        {
+          "@type": "SportsTeam",
+          "@id": "https://void.meonix.me/#team",
+          "name": "VOID Esport",
+          "sport": "Brawl Stars",
+          "url": "https://void.meonix.me/",
+          "logo": "https://void.meonix.me/logo.png",
+          "memberOf": { "@id": "https://void.meonix.me/#organization" },
+          "subOrganization": [
+            { "@type": "SportsTeam", "name": "VOID Alpha" },
+            { "@type": "SportsTeam", "name": "VOID Omega" },
+            { "@type": "SportsTeam", "name": "VOID Nexus" }
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://void.meonix.me/#website",
+          "url": "https://void.meonix.me/",
+          "name": "VOID Esport",
+          "publisher": { "@id": "https://void.meonix.me/#organization" },
+          "inLanguage": ["en", "fr", "es", "de", "pt"]
+        }
+      ]
+    }
+    </script>
   </head>
   <body>
     <div id="root"></div>

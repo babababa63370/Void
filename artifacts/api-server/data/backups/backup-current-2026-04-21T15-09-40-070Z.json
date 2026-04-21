@@ -1,0 +1,54 @@
+{
+  "source": "current",
+  "createdAt": "2026-04-21T15:09:40.070Z",
+  "tables": {
+    "matcherino_events": [
+      {
+        "id": 197311,
+        "title": "Tournament #1",
+        "kind": "tournament",
+        "start_at": "2026-04-20T20:30:00.000Z",
+        "end_at": null,
+        "total_balance": 0,
+        "participants_count": 0,
+        "hero_img": "",
+        "background_img": "https://cdn.matcherino.com/0a518f1a-9ea2-434f-ad2f-963da9c8390a/-/crop/1024x576/0,224/-/resize/800x450/",
+        "thumbnail_img": "",
+        "game_id": 122,
+        "game_title": "Brawl Stars",
+        "game_image": "https://cdn.matcherino.com/c8c2c854-05d3-417c-97ea-ef65412d6505/",
+        "game_slug": "brawl-stars",
+        "fetched_at": "2026-04-20T19:11:17.160Z",
+        "finalized_at": null,
+        "announced": false,
+        "announced_at": null
+      }
+    ],
+    "player_logins": [
+      {
+        "id": 1,
+        "discord_id": "1243206708604702791",
+        "username": "Meonix🌠",
+        "discriminator": "0",
+        "avatar": "3ac14da3c89b1d0d9556537dec2276da",
+        "roles": [
+          "staff"
+        ],
+        "custom_avatar": null,
+        "banner": null,
+        "background": null,
+        "font": null,
+        "music": null,
+        "links": null,
+        "brawl_tag": null,
+        "background_video": null,
+        "card_background": null,
+        "last_login_at": "2026-04-21T15:09:09.338Z",
+        "email": null,
+        "password_hash": null,
+        "auth_type": "discord"
+      }
+    ],
+    "settings": []
+  }
+}
