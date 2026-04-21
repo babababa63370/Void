@@ -50,7 +50,7 @@ Competitive Brawl Stars esport clan site with cyberpunk/esports aesthetic.
 - `/privacy` — Privacy policy
 - `/achievements` — Palmarès / Legacy (page vide pour l'instant : "Rien encore pour l'instant")
 - `/players-login` — Player Portal (Discord OAuth **+ Email/Password signup/login**, noindex, hidden from nav)
-- `/staff` — Staff Panel (Discord OAuth requis + rôle `staff`), sous-routes : Overview / Liste staff / Bot Panel / Matcherino
+- `/staff` — Staff Panel (Discord OAuth requis + rôle `staff`), sous-routes : Overview / Liste staff / Bot Panel / Commandes / Matcherino
 - `/meonix` — Zone restreinte accessible uniquement à l'ID Discord `1243206708604702791` (sinon 404)
 - `/meonix/db` — Admin DB (statut, backups JSON, migration ancienne→nouvelle DB) — Meonix uniquement
 - `/*` — Animated 404 page
@@ -88,7 +88,9 @@ Competitive Brawl Stars esport clan site with cyberpunk/esports aesthetic.
 - `src/pages/players-login.tsx` — Discord OAuth login page (Player Portal)
 - `src/pages/roster-player.tsx` — Player profile page + edit panel
 - `src/pages/roster.tsx` — Roster page with PlayerCard (uses cardBackground)
-- `src/pages/staff.tsx` — Panel staff complet (Overview, Members, Bot, Matcherino)
+- `src/pages/staff.tsx` — Panel staff complet (Overview, Members, Bot, Commandes, Matcherino)
+  - La page **Commandes** (`/staff/bot/commandes`) liste automatiquement les slash commands via `GET /api/bot/commands`
+  - Route imbriquée `/staff/:section/:sub` définie dans `App.tsx`
 - `src/pages/meonix.tsx` — Protected page (server-side JWT verification)
 - `src/hooks/usePageMeta.ts` — Dynamic title/meta + glitch effect
 - `vite.config.ts` — Multi-page build config + dev routing middleware
@@ -111,6 +113,7 @@ Express 5 server sur le port 8080, chemins proxifiés via `/api`.
 - `GET /api/brawl/player/:tag` — proxy vers l'API Brawl Stars
 - `GET /api/staff/members` — liste des membres (staff uniquement)
 - `GET /api/bot/status` — infos du bot Discord
+- `GET /api/bot/commands` — liste des slash commands enregistrées (staff)
 - `PATCH /api/bot/presence` — met à jour statut + activité du bot (staff uniquement)
 - `GET /api/admin/*` — routes admin (ID Discord `1243206708604702791` uniquement)
 - `GET /api/matcherino/events` — liste des événements Matcherino (public)
@@ -123,11 +126,26 @@ Express 5 server sur le port 8080, chemins proxifiés via `/api`.
 - `GET /api/staff/matcherino/settings` — lit les paramètres depuis la DB (staff)
 - `POST /api/staff/matcherino/settings` — sauvegarde un paramètre en DB (staff)
 
+### Discord Bot — Slash commands
+- **`/event`** — Liste les prochains tournois Matcherino VOID (5 max). Boutons liens : *View on VOID* + *View on Matcherino* avec emoji `<:matcherino5e:1494738441349632050>`.
+- **`/maps`** — Rotation Brawl Stars via `https://api.meonix.me/api/events/rotation` (cache 60 s dans `src/lib/brawlEvents.ts`).
+  - Sans argument : message descriptif + **StringSelect** listant les événements actifs
+  - `event:<id>` : détail de la map (image via gallery, mode, horaires start/end)
+  - **Autocomplete** en direct sur le nom du mode et de la map (aucune mise à jour manuelle nécessaire)
+- Handler d'interaction dispatche sur 3 types : `ApplicationCommand`, `ApplicationCommandAutocomplete`, `MessageComponent` (pour le select `maps_select`).
+- Helpers `cv2.ts` : `stringSelect()`, `respondAutocomplete()`, `actionRow()` accepte boutons **ou** select menus.
+
 ### Matcherino Card
 - Générée par `src/lib/matcherinoCard.ts` via sharp (SVG → PNG 1200×630)
 - Style cyberpunk : fond sombre `#0a0a0e`, accent violet `#8b5cf6`, grille, dégradé latéral
 - Dates affichées en heure de Paris (`Europe/Paris`)
 - Ping automatique du rôle `1495421946832359504` lors des annonces auto
+
+### Matcherino Announce (Components V2)
+- Annonce envoyée comme **attachment** `card.png` (sharp) au lieu de l'image `heroImg`
+- Mentions gérées via un `text()` à l'intérieur du container + `allowed_mentions` (Components V2 n'autorise pas `content`)
+- Liens présentés en **boutons** (pas de markdown) : *View on VOID* + *View on Matcherino* (emoji `<:matcherino5e:1494738441349632050>`)
+- Même layout pour les annonces auto, manuelles et la commande `/event`
 
 ### Auto-announce
 - Service `src/lib/autoAnnounce.ts` : polling toutes les 5 min sur l'API Matcherino
@@ -171,9 +189,11 @@ Express 5 server sur le port 8080, chemins proxifiés via `/api`.
 - `src/routes/staff.ts` — liste des membres
 - `src/routes/bot.ts` — status + presence
 - `src/routes/admin.ts` — routes admin
-- `src/lib/bot.ts` — service discord.js
+- `src/lib/bot.ts` — service discord.js + handlers `/event` et `/maps`
+- `src/lib/brawlEvents.ts` — client API Brawl Stars (rotation + cache + parsing timestamps non-ISO)
 - `src/lib/matcherinoCard.ts` — génération PNG des cartes tournoi
-- `src/lib/autoAnnounce.ts` — service d'annonce automatique
+- `src/lib/autoAnnounce.ts` — service d'annonce automatique (exporte `PING_ID`)
+- `src/utils/cv2.ts` — helpers Components V2 (text/sep/gallery/container/linkButton/actionRow/stringSelect, replyInteraction, respondAutocomplete, sendCv2Message, registerSlashCommands)
 
 ---
 
