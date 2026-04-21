@@ -2,7 +2,7 @@ import { db, matcherinoEventsTable, settingsTable } from "@workspace/db";
 import { and, eq, isNull, notInArray } from "drizzle-orm";
 import { sendMatcherinoAnnouncement } from "./bot";
 
-const PING_ID = "1495421946832359504";
+export const PING_ID = "1495421946832359504";
 const CHECK_INTERVAL_MS = 5 * 60 * 1000;
 const MATCHERINO_SEARCH = "https://api.matcherino.com/__api/bounties/search";
 const MATCHERINO_USER_ID = 2423612;

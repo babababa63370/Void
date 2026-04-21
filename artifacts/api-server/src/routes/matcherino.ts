@@ -6,7 +6,7 @@ import { sql } from "drizzle-orm";
 import { db as dbPlayers, playerLoginsTable } from "@workspace/db";
 import { sendMatcherinoAnnouncement } from "../lib/bot";
 import { generateMatcherinoCard } from "../lib/matcherinoCard";
-import { startAutoAnnounce, stopAutoAnnounce, getAutoAnnounceState, persistSettings, loadSettings } from "../lib/autoAnnounce";
+import { startAutoAnnounce, stopAutoAnnounce, getAutoAnnounceState, persistSettings, loadSettings, PING_ID } from "../lib/autoAnnounce";
 
 function getJwtSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -323,6 +323,7 @@ router.post("/staff/matcherino/announce", async (req, res) => {
       participantsCount: event.participantsCount,
       totalBalance: event.totalBalance,
       isTest: isTest ?? false,
+      pingId: PING_ID,
     });
     if (!isTest) {
       await db
