@@ -62,9 +62,27 @@ export interface Button {
   emoji?: ButtonEmoji;
 }
 
+export interface StringSelectOption {
+  label: string;
+  value: string;
+  description?: string;
+  emoji?: ButtonEmoji;
+  default?: boolean;
+}
+
+export interface StringSelectMenu {
+  type: 3;
+  custom_id: string;
+  options: StringSelectOption[];
+  placeholder?: string;
+  min_values?: number;
+  max_values?: number;
+  disabled?: boolean;
+}
+
 export interface ActionRow {
   type: 1;
-  components: Button[];
+  components: (Button | StringSelectMenu)[];
   id?: number;
 }
 
@@ -112,8 +130,21 @@ export function linkButton(label: string, url: string, emoji?: ButtonEmoji): But
   return { type: CType.Button, style: 5, label, url, ...(emoji ? { emoji } : {}) };
 }
 
-export function actionRow(buttons: Button[]): ActionRow {
-  return { type: CType.ActionRow, components: buttons };
+export function actionRow(components: (Button | StringSelectMenu)[]): ActionRow {
+  return { type: CType.ActionRow, components };
+}
+
+export function stringSelect(
+  custom_id: string,
+  options: StringSelectOption[],
+  placeholder?: string,
+): StringSelectMenu {
+  return {
+    type: 3,
+    custom_id,
+    options,
+    ...(placeholder ? { placeholder } : {}),
+  };
 }
 
 export function container(
@@ -234,6 +265,26 @@ export async function replyInteraction(
   if (!res.ok) {
     const txt = await res.text();
     throw new Error(`Discord interaction reply error ${res.status}: ${txt}`);
+  }
+}
+
+/** Respond to an autocomplete interaction (type 8). */
+export async function respondAutocomplete(
+  interactionId: string,
+  interactionToken: string,
+  choices: Array<{ name: string; value: string | number }>,
+): Promise<void> {
+  const res = await fetch(
+    `${DISCORD_API}/interactions/${interactionId}/${interactionToken}/callback`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type: 8, data: { choices: choices.slice(0, 25) } }),
+    },
+  );
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Discord autocomplete error ${res.status}: ${txt}`);
   }
 }
 
