@@ -333,6 +333,7 @@ router.post("/staff/matcherino/announce", async (req, res) => {
     }
     res.json({ success: true, announced: !isTest });
   } catch (err: any) {
+    console.error("[Matcherino announce] error:", err);
     res.status(500).json({ error: err?.message ?? "Failed to send announcement" });
   }
 });
