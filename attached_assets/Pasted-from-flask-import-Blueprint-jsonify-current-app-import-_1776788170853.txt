@@ -1,0 +1,95 @@
+from flask import Blueprint, jsonify, current_app
+import requests
+from requests.exceptions import ConnectionError, Timeout, RequestException
+from utils.cdn_mapper import CDN_BASE
+
+events_bp = Blueprint('events', __name__)
+
+BS_ERROR_MESSAGES = {
+    400: "Requête invalide",
+    403: "Clé API invalide ou accès refusé",
+    404: "Événement introuvable",
+    429: "Trop de requêtes — réessaie dans quelques secondes",
+    500: "Erreur serveur Brawl Stars",
+    503: "API Brawl Stars temporairement indisponible",
+}
+
+
+def _make_request(url, headers):
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+    except ConnectionError:
+        return None, (jsonify({"error": "Impossible de contacter l'API Brawl Stars"}), 503)
+    except Timeout:
+        return None, (jsonify({"error": "L'API Brawl Stars a mis trop de temps à répondre"}), 504)
+    except RequestException as e:
+        return None, (jsonify({"error": f"Erreur réseau : {str(e)}"}), 502)
+
+    if response.status_code != 200:
+        message = BS_ERROR_MESSAGES.get(response.status_code, f"Erreur inconnue ({response.status_code})")
+        return None, (jsonify({"error": message}), response.status_code)
+
+    try:
+        return response.json(), None
+    except ValueError:
+        return None, (jsonify({"error": "Réponse invalide reçue de l'API Brawl Stars"}), 502)
+
+
+def _enrich_event(e):
+    """Enrichit un événement de la rotation avec ses assets CDN."""
+    event = e.get("event", {})
+    event_id = event.get("id")
+    mode = event.get("mode", {})
+    slot = e.get("slot", {})
+
+    # L'ID du mode est directement utilisé pour l'icône CDN
+    mode_id = mode.get("id") if isinstance(mode, dict) else None
+    mode_name = mode.get("name") if isinstance(mode, dict) else mode
+
+    return {
+        "startTime": e.get("startTime"),
+        "endTime": e.get("endTime"),
+        "slot": {
+            "id": slot.get("id"),
+            "name": slot.get("name"),
+            "emoji": slot.get("emoji"),
+            "hash": slot.get("hash"),
+            "listAlone": slot.get("listAlone"),
+            "hideable": slot.get("hideable"),
+            "hideForLevel": slot.get("hideForLevel"),
+            "background": slot.get("background"),
+        },
+        "event": {
+            "id": event_id,
+            "mode": mode_name,
+            "modeId": mode_id,
+            "map": event.get("map"),
+            "mapImage": f"{CDN_BASE}/maps/regular/{event_id}.png" if event_id else None,
+            "modeIcon": f"{CDN_BASE}/game-modes/regular/{mode_id}.png" if mode_id else None,
+        }
+    }
+
+
+# ------------------------------------------------------------------
+# GET /api/events/rotation
+# ------------------------------------------------------------------
+@events_bp.route('/events/rotation')
+def get_event_rotation():
+    api_key = current_app.config['BS_API_KEY']
+    headers = {"Authorization": f"Bearer {api_key}", "Accept": "application/json"}
+    url = "https://api.brawlstars.com/v1/events/rotation"
+
+    data, error = _make_request(url, headers)
+    if error:
+        return error
+
+    try:
+        events = [_enrich_event(e) for e in (data if isinstance(data, list) else [])]
+        events.sort(key=lambda e: e.get("startTime") or "")
+    except Exception as e:
+        return jsonify({"error": f"Erreur traitement : {str(e)}"}), 500
+
+    return jsonify({
+        "rotation": events,
+        "total": len(events)
+    })

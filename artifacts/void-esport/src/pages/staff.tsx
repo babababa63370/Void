@@ -5,6 +5,7 @@ import {
   Crown, Crosshair, UserCheck, ExternalLink,
   Loader2, ChevronRight, Wifi, WifiOff, Radio, Save, Clock,
   Trophy, Calendar, FlaskConical, Send, RefreshCw, Hash, ToggleLeft, ToggleRight, CheckCircle2, AlertCircle,
+  Terminal,
 } from "lucide-react";
 import { SiDiscord, SiTwitch } from "react-icons/si";
 import { Link, useLocation } from "wouter";
@@ -40,6 +41,7 @@ const NAV_GROUPS = [
     category: "Bot Panel",
     items: [
       { path: "/staff/bot", label: "Overview", icon: LayoutDashboard, category: "Bot Panel" },
+      { path: "/staff/bot/commandes", label: "Commandes", icon: Terminal, category: "Bot Panel" },
       { path: "/staff/matcherino", label: "Matcherino", icon: Trophy, category: "Bot Panel" },
     ],
   },
@@ -333,6 +335,75 @@ const EXTRA_ACTIVITY_OPTIONS: { value: ActivityKind; label: string }[] = [
 function modeFromPresence(p: BotInfo["presence"]): BotMode {
   if (p.activityKind === "streaming") return "streaming";
   return p.status;
+}
+
+// ─── Commandes ────────────────────────────────────────────────────────────────
+interface SlashCommand { name: string; description: string; }
+
+function CommandesPage({ token }: { token: string }) {
+  const [commands, setCommands] = useState<SlashCommand[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/bot/commands", { headers: { Authorization: `Bearer ${token}` } })
+      .then(async (r) => {
+        if (!r.ok) throw new Error("fetch_failed");
+        return r.json() as Promise<{ commands: SlashCommand[] }>;
+      })
+      .then((data) => setCommands(data.commands))
+      .catch(() => setError("Impossible de charger les commandes"))
+      .finally(() => setLoading(false));
+  }, [token]);
+
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      <div className="flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+          <Terminal className="w-5 h-5 text-primary" />
+        </div>
+        <div>
+          <h2 className="font-orbitron font-black text-lg uppercase tracking-widest text-white">Commandes</h2>
+          <p className="text-xs text-muted-foreground/60 font-mono">Commandes slash enregistrées sur le bot VOID</p>
+        </div>
+      </div>
+
+      {loading && (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="flex items-center gap-2 px-4 py-3 border border-red-500/30 bg-red-500/5 text-red-400 text-sm">
+          <AlertCircle className="w-4 h-4" /> {error}
+        </div>
+      )}
+
+      {commands && !loading && (
+        <div className="grid gap-2">
+          {commands.length === 0 ? (
+            <p className="text-muted-foreground/40 text-sm font-mono">Aucune commande enregistrée.</p>
+          ) : (
+            commands.map((cmd) => (
+              <div
+                key={cmd.name}
+                className="flex items-start gap-3 px-4 py-3 border border-white/5 bg-white/[0.02] hover:border-primary/30 hover:bg-primary/5 transition-colors"
+              >
+                <div className="shrink-0 mt-0.5 w-8 h-8 rounded-md bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <Hash className="w-4 h-4 text-primary" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <code className="font-mono text-sm text-white">/{cmd.name}</code>
+                  <p className="text-xs text-muted-foreground/60 mt-0.5">{cmd.description}</p>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+    </motion.div>
+  );
 }
 
 function BotPage({ token }: { token: string }) {
@@ -1067,6 +1138,7 @@ export default function Staff() {
   function renderSection() {
     if (location.startsWith("/staff/liste-staff")) return <ListeStaff token={session!.token} />;
     if (location.startsWith("/staff/matcherino")) return <MatcherinoPage token={session!.token} />;
+    if (location.startsWith("/staff/bot/commandes")) return <CommandesPage token={session!.token} />;
     if (location.startsWith("/staff/bot")) return <BotPage token={session!.token} />;
     return <Overview session={session!} isAdmin={isAdmin} />;
   }
@@ -1086,7 +1158,10 @@ export default function Staff() {
                 </p>
                 <div className="flex flex-col gap-0.5">
                   {group.items.map(({ path, label, icon: Icon }) => {
-                    const active = path === "/staff" ? location === "/staff" : location.startsWith(path);
+                    const active =
+                      path === "/staff" || path === "/staff/bot"
+                        ? location === path
+                        : location.startsWith(path);
                     return (
                       <Link
                         key={path}
@@ -1111,7 +1186,10 @@ export default function Staff() {
         {/* ── Mobile bottom tabs ── */}
         <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur border-t border-white/5 flex">
           {NAV_GROUPS.flatMap((g) => g.items).map(({ path, label, icon: Icon }) => {
-            const active = path === "/staff" ? location === "/staff" : location.startsWith(path);
+            const active =
+              path === "/staff" || path === "/staff/bot"
+                ? location === path
+                : location.startsWith(path);
             return (
               <Link
                 key={path}

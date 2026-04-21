@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { db, playerLoginsTable } from "@workspace/db";
 import { jwtVerify } from "jose";
 import { sql } from "drizzle-orm";
-import { getBotInfo, setBotPresence, type BotPresence, type BotStatus, type ActivityKind } from "../lib/bot.js";
+import { getBotInfo, setBotPresence, SLASH_COMMANDS, type BotPresence, type BotStatus, type ActivityKind } from "../lib/bot.js";
 
 const router: IRouter = Router();
 
@@ -40,6 +40,12 @@ async function requireStaff(req: import("express").Request, res: import("express
 router.get("/bot/status", async (req, res) => {
   if (!await requireStaff(req, res)) return;
   res.json(getBotInfo());
+});
+
+// GET /api/bot/commands
+router.get("/bot/commands", async (req, res) => {
+  if (!await requireStaff(req, res)) return;
+  res.json({ commands: SLASH_COMMANDS });
 });
 
 // PATCH /api/bot/presence

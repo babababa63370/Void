@@ -44,6 +44,7 @@ function Router() {
       <Route path="/meonix/db" component={MeonixDb} />
       <Route path="/staff" component={Staff} />
       <Route path="/staff/:section" component={Staff} />
+      <Route path="/staff/:section/:sub" component={Staff} />
       <Route component={NotFound} />
     </Switch>
   );

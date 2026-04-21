@@ -52,7 +52,7 @@ let currentPresence: BotPresence = {
 
 // ─── Slash commands definition ─────────────────────────────────────────────────
 
-const SLASH_COMMANDS = [
+export const SLASH_COMMANDS = [
   {
     name: "event",
     description: "Show upcoming VOID Matcherino tournaments",
