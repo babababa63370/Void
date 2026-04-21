@@ -83,9 +83,6 @@ importers:
 
   artifacts/api-server:
     dependencies:
-      '@types/pg':
-        specifier: ^8.18.0
-        version: 8.18.0
       '@workspace/api-zod':
         specifier: workspace:*
         version: link:../../lib/api-zod
@@ -141,6 +138,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.3.5
+      '@types/pg':
+        specifier: ^8.18.0
+        version: 8.18.0
       esbuild:
         specifier: ^0.27.3
         version: 0.27.3
