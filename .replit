@@ -111,6 +111,7 @@ externalPort = 8000
 [userenv]
 
 [userenv.shared]
+OLD_DATABASE_URL = "postgresql://placeholder:placeholder@localhost:5432/placeholder"
 
 [nix]
 channel = "stable-25_05"

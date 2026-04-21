@@ -7,6 +7,7 @@ import botRouter from "./bot";
 import playersRouter from "./players";
 import matcherinoRouter from "./matcherino";
 import brawlRouter from "./brawl";
+import dbAdminRouter from "./db-admin";
 
 const router: IRouter = Router();
 
@@ -18,5 +19,6 @@ router.use(botRouter);
 router.use(playersRouter);
 router.use(matcherinoRouter);
 router.use(brawlRouter);
+router.use(dbAdminRouter);
 
 export default router;
