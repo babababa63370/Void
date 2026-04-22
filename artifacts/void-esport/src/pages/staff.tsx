@@ -53,8 +53,103 @@ const NAV_GROUPS = [
   },
 ];
 
+// ─── Overview Stats ──────────────────────────────────────────────────────────
+const ACTION_META: Record<string, { label: string; icon: typeof Ban; color: string; bg: string }> = {
+  ban:    { label: "Ban",    icon: Ban,      color: "text-red-400",     bg: "bg-red-500/10 border-red-500/30" },
+  unban:  { label: "Unban",  icon: UserCheck,color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/30" },
+  kick:   { label: "Kick",   icon: UserX,    color: "text-orange-400",  bg: "bg-orange-500/10 border-orange-500/30" },
+  mute:   { label: "Mute",   icon: VolumeX,  color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/30" },
+  unmute: { label: "Demute", icon: Volume2,  color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/30" },
+  move:   { label: "Move",   icon: Move,     color: "text-cyan-400",    bg: "bg-cyan-500/10 border-cyan-500/30" },
+};
+
+interface OverviewStats {
+  staffCount: number;
+  botOnline: boolean;
+  upcomingMatcherino: { id: number; title: string; startAt: string | null }[];
+  matcherinoCount: number;
+  recentLogs: {
+    id: number; action: string; targetUsername: string | null; targetId: string;
+    moderatorUsername: string | null; reason: string | null; success: string; createdAt: string;
+  }[];
+  modLast24h: number;
+}
+
+function useOverviewStats(token: string) {
+  const [stats, setStats] = useState<OverviewStats | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const headers = { Authorization: `Bearer ${token}` };
+
+    Promise.all([
+      fetch("/api/staff/members", { headers }).then((r) => r.json()).catch(() => []),
+      fetch("/api/bot/status", { headers }).then((r) => r.json()).catch(() => ({ connected: false })),
+      fetch("/api/matcherino/events").then((r) => r.json()).catch(() => ({ events: [] })),
+      fetch("/api/moderation/logs?limit=5", { headers }).then((r) => r.json()).catch(() => ({ logs: [], total: 0 })),
+      fetch("/api/moderation/logs?limit=200", { headers }).then((r) => r.json()).catch(() => ({ logs: [] })),
+    ]).then(([members, bot, mat, recent, all]) => {
+      if (cancelled) return;
+      const now = Date.now();
+      const upcoming = (mat.events ?? [])
+        .filter((e: { startAt: string | null }) => e.startAt && new Date(e.startAt).getTime() > now)
+        .slice(0, 3);
+      const dayAgo = now - 86400_000;
+      const last24h = (all.logs ?? []).filter(
+        (l: { createdAt: string }) => new Date(l.createdAt).getTime() > dayAgo,
+      ).length;
+      setStats({
+        staffCount: Array.isArray(members) ? members.length : 0,
+        botOnline: !!bot.connected,
+        upcomingMatcherino: upcoming,
+        matcherinoCount: (mat.events ?? []).filter(
+          (e: { startAt: string | null }) => e.startAt && new Date(e.startAt).getTime() > now,
+        ).length,
+        recentLogs: recent.logs ?? [],
+        modLast24h: last24h,
+      });
+      setLoading(false);
+    });
+
+    return () => { cancelled = true; };
+  }, [token]);
+
+  return { stats, loading };
+}
+
+function StatCard({ icon: Icon, label, value, sub, accent }: {
+  icon: typeof Users; label: string; value: React.ReactNode; sub?: string; accent: string;
+}) {
+  return (
+    <div className={`p-4 border bg-white/[0.02] ${accent}`}>
+      <div className="flex items-center gap-2 mb-2">
+        <Icon className="w-3.5 h-3.5" />
+        <p className="text-[10px] font-orbitron uppercase tracking-widest opacity-70">{label}</p>
+      </div>
+      <p className="font-orbitron font-black text-2xl text-white">{value}</p>
+      {sub && <p className="text-[11px] font-mono text-muted-foreground/50 mt-1">{sub}</p>}
+    </div>
+  );
+}
+
+function formatRelative(iso: string): string {
+  const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (diff < 60) return `il y a ${diff}s`;
+  if (diff < 3600) return `il y a ${Math.floor(diff / 60)}m`;
+  if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`;
+  return `il y a ${Math.floor(diff / 86400)}j`;
+}
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("fr-FR", {
+    day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris",
+  });
+}
+
 // ─── Overview ────────────────────────────────────────────────────────────────
-function Overview({ session, isAdmin }: { session: ReturnType<typeof useSession>["session"] & object; isAdmin: boolean }) {
+function Overview({ session, isAdmin, token }: { session: ReturnType<typeof useSession>["session"] & object; isAdmin: boolean; token: string }) {
+  const { stats, loading: statsLoading } = useOverviewStats(token);
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
       {/* Welcome */}
@@ -102,6 +197,148 @@ function Overview({ session, isAdmin }: { session: ReturnType<typeof useSession>
           })}
         </div>
       </div>
+
+      {/* Quick stats */}
+      <div>
+        <p className="text-[11px] font-orbitron text-muted-foreground/40 uppercase tracking-widest mb-3">
+          Vue d'ensemble
+        </p>
+        {statsLoading || !stats ? (
+          <div className="flex items-center gap-2 text-muted-foreground/50 text-sm">
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Chargement des stats…
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard
+              icon={Users}
+              label="Membres staff"
+              value={stats.staffCount}
+              sub="Avec le rôle Staff"
+              accent="border-cyan-500/20 text-cyan-400"
+            />
+            <StatCard
+              icon={stats.botOnline ? Wifi : WifiOff}
+              label="Bot Discord"
+              value={stats.botOnline ? "Online" : "Offline"}
+              sub={stats.botOnline ? "Connecté" : "Déconnecté"}
+              accent={stats.botOnline ? "border-green-500/20 text-green-400" : "border-red-500/20 text-red-400"}
+            />
+            <StatCard
+              icon={Trophy}
+              label="Tournois à venir"
+              value={stats.matcherinoCount}
+              sub="Matcherino"
+              accent="border-violet-500/20 text-violet-400"
+            />
+            <StatCard
+              icon={Gavel}
+              label="Modération 24h"
+              value={stats.modLast24h}
+              sub="Actions du bot"
+              accent="border-fuchsia-500/20 text-fuchsia-400"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Prochains tournois */}
+      {stats && stats.upcomingMatcherino.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[11px] font-orbitron text-muted-foreground/40 uppercase tracking-widest">
+              Prochains tournois
+            </p>
+            <Link
+              href="/staff/matcherino"
+              className="text-[10px] font-orbitron uppercase tracking-wider text-violet-400 hover:text-violet-300 inline-flex items-center gap-1"
+            >
+              Tout voir <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="grid gap-2">
+            {stats.upcomingMatcherino.map((ev) => (
+              <Link
+                key={ev.id}
+                href="/staff/matcherino"
+                className="flex items-center justify-between p-3.5 border border-white/5 bg-white/[0.02] hover:bg-white/[0.05] hover:border-violet-500/20 transition-colors group"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-8 h-8 shrink-0 flex items-center justify-center border border-violet-500/30 bg-violet-500/10">
+                    <Trophy className="w-4 h-4 text-violet-400" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="font-orbitron font-bold text-sm text-white truncate">{ev.title}</p>
+                    {ev.startAt && (
+                      <p className="text-[11px] font-mono text-muted-foreground/50 mt-0.5 flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {formatDate(ev.startAt)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/30 group-hover:text-violet-400/60 transition-colors shrink-0" />
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Derniers logs de modération */}
+      {stats && stats.recentLogs.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-[11px] font-orbitron text-muted-foreground/40 uppercase tracking-widest">
+              Derniers logs de modération
+            </p>
+            <Link
+              href="/staff/moderation/logs"
+              className="text-[10px] font-orbitron uppercase tracking-wider text-fuchsia-400 hover:text-fuchsia-300 inline-flex items-center gap-1"
+            >
+              Tout voir <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <div className="grid gap-2">
+            {stats.recentLogs.map((log) => {
+              const meta = ACTION_META[log.action] ?? { label: log.action, icon: Gavel, color: "text-muted-foreground", bg: "bg-white/5 border-white/10" };
+              const Icon = meta.icon;
+              const failed = log.success !== "yes";
+              return (
+                <div
+                  key={log.id}
+                  className="flex items-center gap-3 p-3 border border-white/5 bg-white/[0.02]"
+                >
+                  <span className={`inline-flex items-center gap-1 px-2 py-1 border text-[10px] font-orbitron uppercase tracking-wider shrink-0 ${meta.color} ${meta.bg}`}>
+                    <Icon className="w-3 h-3" />
+                    {meta.label}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white truncate">
+                      <span className="font-medium">{log.targetUsername ?? log.targetId}</span>
+                      <span className="text-muted-foreground/50 text-xs font-mono ml-2">
+                        par {log.moderatorUsername ?? "—"}
+                      </span>
+                    </p>
+                    {log.reason && (
+                      <p className="text-[11px] text-muted-foreground/40 truncate mt-0.5">{log.reason}</p>
+                    )}
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className="text-[10px] font-mono text-muted-foreground/40">
+                      {formatRelative(log.createdAt)}
+                    </span>
+                    {failed && (
+                      <span className="inline-flex items-center gap-1 text-[9px] font-orbitron uppercase tracking-wider text-red-400">
+                        <AlertCircle className="w-2.5 h-2.5" /> Échec
+                      </span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Admin panel — meonix only */}
       {isAdmin && (
@@ -1359,7 +1596,7 @@ export default function Staff() {
     if (location.startsWith("/staff/bot/commandes")) return <CommandesPage token={session!.token} />;
     if (location.startsWith("/staff/bot")) return <BotPage token={session!.token} />;
     if (location.startsWith("/staff/moderation/logs")) return <ModerationLogsPage token={session!.token} />;
-    return <Overview session={session!} isAdmin={isAdmin} />;
+    return <Overview session={session!} isAdmin={isAdmin} token={session!.token} />;
   }
 
   return (
