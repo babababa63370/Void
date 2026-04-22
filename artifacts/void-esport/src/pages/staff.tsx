@@ -51,6 +51,10 @@ const NAV_GROUPS = [
       { path: "/staff/moderation/logs", label: "Logs", icon: Gavel, category: "Modération" },
     ],
   },
+  {
+    category: "Recrutements",
+    items: [],
+  },
 ];
 
 // ─── Overview Stats ──────────────────────────────────────────────────────────
