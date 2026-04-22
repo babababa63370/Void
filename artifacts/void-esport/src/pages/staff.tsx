@@ -54,15 +54,6 @@ const NAV_GROUPS = [
 ];
 
 // ─── Overview Stats ──────────────────────────────────────────────────────────
-const ACTION_META: Record<string, { label: string; icon: typeof Ban; color: string; bg: string }> = {
-  ban:    { label: "Ban",    icon: Ban,      color: "text-red-400",     bg: "bg-red-500/10 border-red-500/30" },
-  unban:  { label: "Unban",  icon: UserCheck,color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/30" },
-  kick:   { label: "Kick",   icon: UserX,    color: "text-orange-400",  bg: "bg-orange-500/10 border-orange-500/30" },
-  mute:   { label: "Mute",   icon: VolumeX,  color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/30" },
-  unmute: { label: "Demute", icon: Volume2,  color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/30" },
-  move:   { label: "Move",   icon: Move,     color: "text-cyan-400",    bg: "bg-cyan-500/10 border-cyan-500/30" },
-};
-
 interface OverviewStats {
   staffCount: number;
   botOnline: boolean;
@@ -139,12 +130,6 @@ function formatRelative(iso: string): string {
   if (diff < 3600) return `il y a ${Math.floor(diff / 60)}m`;
   if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`;
   return `il y a ${Math.floor(diff / 86400)}j`;
-}
-
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("fr-FR", {
-    day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Paris",
-  });
 }
 
 // ─── Overview ────────────────────────────────────────────────────────────────
