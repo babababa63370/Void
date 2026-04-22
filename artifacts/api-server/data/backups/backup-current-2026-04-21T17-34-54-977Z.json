@@ -1,0 +1,149 @@
+{
+  "source": "current",
+  "createdAt": "2026-04-21T17:34:54.977Z",
+  "tables": {
+    "matcherino_events": [
+      {
+        "id": 197628,
+        "title": "Tournament #2",
+        "kind": "tournament",
+        "start_at": "2026-04-22T11:00:00.000Z",
+        "end_at": null,
+        "total_balance": 0,
+        "participants_count": 0,
+        "hero_img": "",
+        "background_img": "https://cdn.matcherino.com/ba9dc9c1-8e52-4d59-b82e-6e6558516af6/-/crop/1024x576/0,224/-/resize/800x450/",
+        "thumbnail_img": "",
+        "game_id": 122,
+        "game_title": "Brawl Stars",
+        "game_image": "https://cdn.matcherino.com/c8c2c854-05d3-417c-97ea-ef65412d6505/",
+        "game_slug": "brawl-stars",
+        "finalized_at": null,
+        "fetched_at": "2026-04-21T16:06:10.169Z",
+        "announced": true,
+        "announced_at": "2026-04-21T16:10:14.834Z"
+      }
+    ],
+    "moderation_logs": [
+      {
+        "id": 1,
+        "action": "move",
+        "guild_id": "1494337279312007361",
+        "target_id": "1243206708604702791",
+        "target_username": "meonix.me",
+        "moderator_id": "1243206708604702791",
+        "moderator_username": "meonix.me",
+        "reason": "Ptit test des familles",
+        "duration_sec": null,
+        "extra": {
+          "channelId": "1494343944463712317",
+          "channelName": "🌐・https://void.meonix.me/"
+        },
+        "dm_delivered": "no",
+        "success": "yes",
+        "error_message": null,
+        "created_at": "2026-04-21T17:29:25.690Z"
+      },
+      {
+        "id": 2,
+        "action": "mute",
+        "guild_id": "1494337279312007361",
+        "target_id": "1412465432664997968",
+        "target_username": "libian2011_11953",
+        "moderator_id": "1243206708604702791",
+        "moderator_username": "meonix.me",
+        "reason": "test aussi",
+        "duration_sec": "60",
+        "extra": null,
+        "dm_delivered": "no",
+        "success": "no",
+        "error_message": "Discord 403: {\"message\": \"Missing Permissions\", \"code\": 50013}",
+        "created_at": "2026-04-21T17:30:52.979Z"
+      },
+      {
+        "id": 3,
+        "action": "mute",
+        "guild_id": "1494337279312007361",
+        "target_id": "1412465432664997968",
+        "target_username": "libian2011_11953",
+        "moderator_id": "1243206708604702791",
+        "moderator_username": "meonix.me",
+        "reason": null,
+        "duration_sec": "60",
+        "extra": null,
+        "dm_delivered": "no",
+        "success": "no",
+        "error_message": "Discord 403: {\"message\": \"Missing Permissions\", \"code\": 50013}",
+        "created_at": "2026-04-21T17:32:25.083Z"
+      },
+      {
+        "id": 4,
+        "action": "mute",
+        "guild_id": "1494337279312007361",
+        "target_id": "1495820315194953869",
+        "target_username": "val63370",
+        "moderator_id": "1243206708604702791",
+        "moderator_username": "meonix.me",
+        "reason": "test",
+        "duration_sec": "60",
+        "extra": {
+          "unit": "m",
+          "duration": 1,
+          "untilIso": "2026-04-21T17:34:28.754Z"
+        },
+        "dm_delivered": "no",
+        "success": "yes",
+        "error_message": null,
+        "created_at": "2026-04-21T17:33:29.610Z"
+      },
+      {
+        "id": 5,
+        "action": "unmute",
+        "guild_id": "1494337279312007361",
+        "target_id": "1495820315194953869",
+        "target_username": "val63370",
+        "moderator_id": "1243206708604702791",
+        "moderator_username": "meonix.me",
+        "reason": "testt",
+        "duration_sec": null,
+        "extra": null,
+        "dm_delivered": "no",
+        "success": "yes",
+        "error_message": null,
+        "created_at": "2026-04-21T17:34:19.818Z"
+      }
+    ],
+    "player_logins": [
+      {
+        "id": 1,
+        "discord_id": "1243206708604702791",
+        "username": "Meonix🌠",
+        "discriminator": "0",
+        "avatar": "3ac14da3c89b1d0d9556537dec2276da",
+        "email": null,
+        "password_hash": null,
+        "auth_type": "discord",
+        "roles": [
+          "staff"
+        ],
+        "custom_avatar": null,
+        "banner": null,
+        "background": null,
+        "font": null,
+        "music": null,
+        "links": null,
+        "brawl_tag": null,
+        "background_video": null,
+        "card_background": null,
+        "last_login_at": "2026-04-21T15:54:05.222Z"
+      }
+    ],
+    "settings": [
+      {
+        "key": "matcherino.manualChannelId",
+        "value": "1494343959877779558",
+        "updated_at": "2026-04-21T16:06:02.671Z"
+      }
+    ]
+  }
+}

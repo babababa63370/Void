@@ -192,5 +192,15 @@ export async function generateMatcherinoCard(event: CardEvent): Promise<Buffer> 
   ${testBanner}
 </svg>`.trim();
 
-  return sharp(Buffer.from(svg)).png().toBuffer();
+  // Render at 4x density (288 DPI vs default 72) for crisp text/lines,
+  // then downscale with lanczos3 for maximum sharpness. Output as
+  // lossless PNG with max compression.
+  return sharp(Buffer.from(svg), { density: 288 })
+    .resize(W, H, { kernel: "lanczos3", fit: "fill" })
+    .png({
+      compressionLevel: 9,
+      adaptiveFiltering: true,
+      palette: false,
+    })
+    .toBuffer();
 }
