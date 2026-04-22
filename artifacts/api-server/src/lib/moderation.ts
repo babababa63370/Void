@@ -40,14 +40,14 @@ async function discord<T = unknown>(
 
 export async function sendDM(
   userId: string,
-  payload: Parameters<typeof sendCv2Message>[2],
+  payload: Parameters<typeof sendCv2Message>[1],
 ): Promise<boolean> {
   try {
     const channel = await discord<{ id: string }>("/users/@me/channels", {
       method: "POST",
       body: JSON.stringify({ recipient_id: userId }),
     });
-    await sendCv2Message(channel.id, token(), payload);
+    await sendCv2Message(channel.id, payload, token());
     return true;
   } catch (err) {
     console.warn(`[Mod] DM to ${userId} failed:`, err);
