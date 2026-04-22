@@ -5,7 +5,7 @@ import {
   Crown, Crosshair, UserCheck, ExternalLink,
   Loader2, ChevronRight, Wifi, WifiOff, Radio, Save, Clock,
   Trophy, Calendar, FlaskConical, Send, RefreshCw, Hash, ToggleLeft, ToggleRight, CheckCircle2, AlertCircle,
-  Terminal, Gavel, Ban, UserX, VolumeX, Volume2, Move,
+  Terminal, Gavel, Ban, UserX, VolumeX, Volume2, Move, ClipboardList,
 } from "lucide-react";
 import { SiDiscord, SiTwitch } from "react-icons/si";
 import { Link, useLocation } from "wouter";
@@ -53,9 +53,27 @@ const NAV_GROUPS = [
   },
   {
     category: "Recrutements",
-    items: [],
+    items: [
+      { path: "/staff/recrutements/candidatures", label: "Candidatures", icon: ClipboardList, category: "Recrutements" },
+    ],
   },
 ];
+
+// ─── Candidatures (vide pour l'instant) ──────────────────────────────────────
+function CandidaturesPage() {
+  return (
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+      <div>
+        <h2 className="font-orbitron font-black text-lg uppercase tracking-widest text-white mb-1">Candidatures</h2>
+        <p className="text-xs text-muted-foreground">Demandes de recrutement reçues</p>
+      </div>
+      <div className="p-8 border border-white/5 bg-white/[0.02] text-center">
+        <ClipboardList className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
+        <p className="text-sm text-muted-foreground/50 font-mono">Rien à afficher pour l'instant.</p>
+      </div>
+    </motion.div>
+  );
+}
 
 // ─── Overview Stats ──────────────────────────────────────────────────────────
 interface OverviewStats {
@@ -1585,6 +1603,7 @@ export default function Staff() {
     if (location.startsWith("/staff/bot/commandes")) return <CommandesPage token={session!.token} />;
     if (location.startsWith("/staff/bot")) return <BotPage token={session!.token} />;
     if (location.startsWith("/staff/moderation/logs")) return <ModerationLogsPage token={session!.token} />;
+    if (location.startsWith("/staff/recrutements/candidatures")) return <CandidaturesPage />;
     return <Overview session={session!} isAdmin={isAdmin} token={session!.token} />;
   }
 
