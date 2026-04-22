@@ -250,17 +250,36 @@ export default function Roster() {
                 </div>
 
                 {/* Desktop */}
-                <div className={`hidden sm:grid gap-5 ${
-                  activeTab === "alpha"
-                    ? "grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
-                    : activeTab === "staff"
-                    ? "grid-cols-2 max-w-xl mx-auto"
-                    : "grid-cols-2 lg:grid-cols-4"
+                <div className={`hidden sm:flex flex-wrap justify-center gap-5 ${
+                  activeTab === "staff" ? "max-w-xl mx-auto" : ""
                 }`}>
                   {currentRoster.map((player, i) => (
-                    <PlayerCard key={player.discordId} player={player} index={i} />
+                    <div
+                      key={player.discordId}
+                      className={
+                        activeTab === "alpha"
+                          ? "w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-2.5rem)/3)] xl:w-[calc((100%-5rem)/5)]"
+                          : activeTab === "staff"
+                          ? "w-[calc((100%-1.25rem)/2)]"
+                          : "w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-3.75rem)/4)]"
+                      }
+                    >
+                      <PlayerCard player={player} index={i} />
+                    </div>
                   ))}
-                  {showOpenSlot && <OpenSlotCard t={t} />}
+                  {showOpenSlot && (
+                    <div
+                      className={
+                        activeTab === "alpha"
+                          ? "w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-2.5rem)/3)] xl:w-[calc((100%-5rem)/5)]"
+                          : activeTab === "staff"
+                          ? "w-[calc((100%-1.25rem)/2)]"
+                          : "w-[calc((100%-1.25rem)/2)] lg:w-[calc((100%-3.75rem)/4)]"
+                      }
+                    >
+                      <OpenSlotCard t={t} />
+                    </div>
+                  )}
                 </div>
               </motion.div>
             </AnimatePresence>

@@ -279,7 +279,7 @@ export default function Matcherino() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
-              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-px sm:bg-white/5 max-w-5xl mx-auto"
+              className="flex flex-wrap justify-center gap-3 max-w-5xl mx-auto"
             >
               {displayedEvents.map((event, i) => (
                 <motion.a
@@ -290,7 +290,7 @@ export default function Matcherino() {
                   whileInView="visible"
                   viewport={{ once: true }}
                   custom={i * 0.08}
-                  className={`group bg-background border border-white/5 sm:border-0 p-0 hover:bg-primary/5 transition-colors flex flex-col overflow-hidden active:scale-[0.99] ${activeTab === "finished" ? "opacity-80 hover:opacity-100" : ""}`}
+                  className={`group bg-background border border-white/5 p-0 hover:bg-primary/5 transition-colors flex flex-col overflow-hidden active:scale-[0.99] w-full sm:w-[calc((100%-0.75rem)/2)] lg:w-[calc((100%-1.5rem)/3)] ${activeTab === "finished" ? "opacity-80 hover:opacity-100" : ""}`}
                 >
                   {/* Image */}
                   {(event.backgroundImg || event.heroImg || event.gameImage) ? (
