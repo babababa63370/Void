@@ -25,6 +25,9 @@ import {
   replySuccess, replyError,
   ACCENT_RED, ACCENT_ORANGE, ACCENT_GREEN,
 } from "./moderation.js";
+import {
+  handleDivisionSelect, handleTagConfirmButton, handleTicketMessage,
+} from "./recruitment.js";
 
 // ─── Presence ─────────────────────────────────────────────────────────────────
 
@@ -49,7 +52,11 @@ export interface BotInfo {
 }
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+  ],
 });
 
 let connected = false;
@@ -179,6 +186,22 @@ client.on("error", (err) => {
 
 client.on("shardDisconnect", () => {
   connected = false;
+});
+
+// Recruitment ticket message listener
+client.on(Events.MessageCreate, async (message) => {
+  try {
+    if (message.author.bot) return;
+    if (!message.guildId) return;
+    await handleTicketMessage({
+      id: message.id,
+      channelId: message.channelId,
+      author: { id: message.author.id, bot: message.author.bot },
+      content: message.content ?? "",
+    });
+  } catch (err) {
+    console.error("[Bot] Recruitment message error:", err);
+  }
 });
 
 // ─── Interaction handler ───────────────────────────────────────────────────────
@@ -693,8 +716,18 @@ client.on(Events.InteractionCreate, async (interaction) => {
       return;
     }
     if (interaction.type === InteractionType.MessageComponent) {
-      if ((interaction as any).customId === "maps_select") {
+      const cid = (interaction as any).customId;
+      if (cid === "maps_select") {
         return void (await handleMapsSelect(interaction));
+      }
+      if (cid === "recruitment_division") {
+        return void (await handleDivisionSelect(interaction));
+      }
+      if (cid === "recruitment_tag_yes") {
+        return void (await handleTagConfirmButton(interaction, "yes"));
+      }
+      if (cid === "recruitment_tag_no") {
+        return void (await handleTagConfirmButton(interaction, "no"));
       }
       return;
     }

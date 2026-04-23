@@ -60,18 +60,404 @@ const NAV_GROUPS = [
 ];
 
 // ─── Candidatures (vide pour l'instant) ──────────────────────────────────────
-function CandidaturesPage() {
+// ─── Recruitment ─────────────────────────────────────────────────────────────
+
+interface RecruitmentApp {
+  id: number;
+  discordId: string;
+  discordUsername: string | null;
+  channelId: string;
+  division: "alpha" | "omega" | "nexus";
+  step: string;
+  brawlTag: string | null;
+  brawlName: string | null;
+  brawlIconId: number | null;
+  brawlTrophies: number | null;
+  trophies: string | null;
+  ranked: string | null;
+  ambitions: string | null;
+  motivation: string | null;
+  status: "draft" | "pending" | "accepted" | "refused" | "on_hold";
+  staffNote: string | null;
+  reviewedBy: string | null;
+  reviewedByUsername: string | null;
+  reviewedAt: string | null;
+  submittedAt: string | null;
+  createdAt: string;
+}
+
+const DIVISION_META: Record<string, { label: string; rank: string; color: string; bg: string }> = {
+  alpha: { label: "Alpha", rank: "Master",       color: "text-yellow-300", bg: "bg-yellow-500/10 border-yellow-500/40" },
+  omega: { label: "Omega", rank: "Légendaire 2", color: "text-purple-300", bg: "bg-purple-500/10 border-purple-500/40" },
+  nexus: { label: "Nexus", rank: "Mythique 2",   color: "text-cyan-300",   bg: "bg-cyan-500/10 border-cyan-500/40" },
+};
+
+const STATUS_META: Record<RecruitmentApp["status"], { label: string; color: string; bg: string }> = {
+  draft:    { label: "Brouillon",  color: "text-muted-foreground", bg: "bg-white/5 border-white/10" },
+  pending:  { label: "En attente", color: "text-orange-300",       bg: "bg-orange-500/10 border-orange-500/40" },
+  accepted: { label: "Accepté",    color: "text-green-300",        bg: "bg-green-500/10 border-green-500/40" },
+  refused:  { label: "Refusé",     color: "text-red-300",          bg: "bg-red-500/10 border-red-500/40" },
+  on_hold:  { label: "En pause",   color: "text-yellow-300",       bg: "bg-yellow-500/10 border-yellow-500/40" },
+};
+
+const STATUS_FILTERS = ["all", "pending", "accepted", "refused", "on_hold", "draft"] as const;
+
+function fmtDateShort(iso: string | null): string {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleString("fr-FR", {
+    day: "2-digit", month: "2-digit", year: "numeric",
+    hour: "2-digit", minute: "2-digit",
+  });
+}
+
+function CandidaturesPage({ token }: { token: string }) {
+  const [apps, setApps] = useState<RecruitmentApp[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<(typeof STATUS_FILTERS)[number]>("all");
+
+  // Panel sender state
+  const [panelChannelId, setPanelChannelId] = useState("");
+  const [panelSending, setPanelSending] = useState(false);
+  const [panelMessage, setPanelMessage] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    const qs = new URLSearchParams({ limit: "100", status: filter });
+    fetch(`/api/staff/recruitment/applications?${qs.toString()}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(async (r) => {
+        if (!r.ok) throw new Error("fetch_failed");
+        return r.json() as Promise<{ applications: RecruitmentApp[]; total: number }>;
+      })
+      .then((data) => { setApps(data.applications); setTotal(data.total); })
+      .catch(() => setError("Impossible de charger les candidatures"))
+      .finally(() => setLoading(false));
+  }, [token, filter]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const sendPanel = async () => {
+    const channelId = panelChannelId.trim();
+    if (!/^\d{17,20}$/.test(channelId)) {
+      setPanelMessage({ ok: false, text: "ID de salon invalide (17-20 chiffres)." });
+      return;
+    }
+    setPanelSending(true);
+    setPanelMessage(null);
+    try {
+      const res = await fetch("/api/staff/recruitment/panel", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ channelId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "send_failed");
+      setPanelMessage({ ok: true, text: "Panel envoyé dans le salon." });
+      setPanelChannelId("");
+    } catch (err) {
+      setPanelMessage({ ok: false, text: err instanceof Error ? err.message : "Échec de l'envoi" });
+    } finally {
+      setPanelSending(false);
+    }
+  };
+
   return (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-      <div>
-        <h2 className="font-orbitron font-black text-lg uppercase tracking-widest text-white mb-1">Candidatures</h2>
-        <p className="text-xs text-muted-foreground">Demandes de recrutement reçues</p>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center">
+            <ClipboardList className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="font-orbitron font-black text-lg uppercase tracking-widest text-white">Candidatures</h2>
+            <p className="text-xs text-muted-foreground/60 font-mono">{total} candidature{total > 1 ? "s" : ""}</p>
+          </div>
+        </div>
+        <button
+          onClick={load}
+          className="flex items-center gap-2 px-3 py-2 text-xs font-mono text-muted-foreground hover:text-foreground border border-white/10 hover:border-primary/40 hover:bg-primary/5 transition-colors"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} /> Rafraîchir
+        </button>
       </div>
-      <div className="p-8 border border-white/5 bg-white/[0.02] text-center">
-        <ClipboardList className="w-8 h-8 text-muted-foreground/30 mx-auto mb-3" />
-        <p className="text-sm text-muted-foreground/50 font-mono">Rien à afficher pour l'instant.</p>
+
+      {/* Send panel */}
+      <div className="border border-white/10 bg-white/[0.02] p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <Send className="w-4 h-4 text-primary" />
+          <h3 className="text-xs font-orbitron uppercase tracking-widest text-white">Envoyer le panel de recrutement</h3>
+        </div>
+        <p className="text-xs text-muted-foreground/70 font-mono">
+          Indique l'ID du salon Discord où poster le sélecteur de division. Pour récupérer un ID, active le mode développeur Discord puis clique-droit → Copier l'ID.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <input
+            value={panelChannelId}
+            onChange={(e) => setPanelChannelId(e.target.value)}
+            placeholder="ID du salon (ex. 1234567890123456789)"
+            className="flex-1 min-w-[260px] px-3 py-2 bg-black/40 border border-white/10 focus:border-primary/40 outline-none text-sm font-mono text-white placeholder:text-muted-foreground/40"
+          />
+          <button
+            onClick={sendPanel}
+            disabled={panelSending || !panelChannelId.trim()}
+            className="flex items-center gap-2 px-4 py-2 bg-primary/10 border border-primary/40 text-primary text-xs font-orbitron uppercase tracking-widest hover:bg-primary/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            {panelSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+            Envoyer
+          </button>
+        </div>
+        {panelMessage && (
+          <div className={`flex items-center gap-2 px-3 py-2 text-xs font-mono ${
+            panelMessage.ok
+              ? "text-green-300 bg-green-500/5 border border-green-500/30"
+              : "text-red-300 bg-red-500/5 border border-red-500/30"
+          }`}>
+            {panelMessage.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+            {panelMessage.text}
+          </div>
+        )}
       </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-2">
+        {STATUS_FILTERS.map((f) => {
+          const active = filter === f;
+          const label = f === "all" ? "Toutes" : STATUS_META[f].label;
+          return (
+            <button
+              key={f}
+              onClick={() => setFilter(f)}
+              className={`px-3 py-1.5 text-xs font-mono uppercase tracking-wider border transition-colors ${
+                active
+                  ? "bg-primary/10 border-primary/40 text-primary"
+                  : "border-white/10 text-muted-foreground hover:border-white/20 hover:text-foreground"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
+      {loading && (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="flex items-center gap-2 px-4 py-3 border border-red-500/30 bg-red-500/5 text-red-400 text-sm">
+          <AlertCircle className="w-4 h-4" /> {error}
+        </div>
+      )}
+
+      {apps && !loading && (
+        <div className="space-y-3">
+          {apps.length === 0 ? (
+            <p className="text-muted-foreground/40 text-sm font-mono py-8 text-center">Aucune candidature pour ce filtre.</p>
+          ) : (
+            apps.map((app) => (
+              <ApplicationCard key={app.id} app={app} token={token} onUpdated={load} />
+            ))
+          )}
+        </div>
+      )}
     </motion.div>
+  );
+}
+
+function ApplicationCard({ app, token, onUpdated }: { app: RecruitmentApp; token: string; onUpdated: () => void }) {
+  const div = DIVISION_META[app.division] ?? { label: app.division, rank: "—", color: "text-white", bg: "bg-white/5 border-white/10" };
+  const status = STATUS_META[app.status];
+  const [open, setOpen] = useState(app.status === "pending");
+  const [note, setNote] = useState(app.staffNote ?? "");
+  const [saving, setSaving] = useState<RecruitmentApp["status"] | null>(null);
+  const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+
+  const updateStatus = async (newStatus: "accepted" | "refused" | "on_hold" | "pending") => {
+    setSaving(newStatus);
+    setFeedback(null);
+    try {
+      const res = await fetch(`/api/staff/recruitment/applications/${app.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ status: newStatus, staffNote: note }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? "update_failed");
+      const dmText = newStatus === "pending" ? "" : data.dmDelivered ? " · MP envoyé" : " · MP non délivré";
+      setFeedback({ ok: true, text: `Statut mis à jour${dmText}.` });
+      onUpdated();
+    } catch (err) {
+      setFeedback({ ok: false, text: err instanceof Error ? err.message : "Erreur" });
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <div className="border border-white/5 bg-white/[0.02] hover:border-white/10 transition-colors">
+      {/* Header (clickable) */}
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="w-full flex items-center justify-between gap-3 p-4 text-left"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={`px-2.5 py-1 border ${div.bg} ${div.color} text-[10px] font-orbitron uppercase tracking-widest`}>
+            {div.label}
+          </div>
+          <div className="min-w-0">
+            <div className="text-sm font-mono text-white truncate">
+              {app.discordUsername ?? app.discordId}
+              {app.brawlName && <span className="text-muted-foreground/60"> · {app.brawlName}</span>}
+            </div>
+            <div className="text-[11px] font-mono text-muted-foreground/50">
+              {fmtDateShort(app.submittedAt ?? app.createdAt)}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`px-2 py-0.5 border text-[10px] font-mono uppercase tracking-wider ${status.bg} ${status.color}`}>
+            {status.label}
+          </span>
+          <ChevronRight className={`w-4 h-4 text-muted-foreground/40 transition-transform ${open ? "rotate-90" : ""}`} />
+        </div>
+      </button>
+
+      {/* Body */}
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="overflow-hidden"
+          >
+            <div className="border-t border-white/5 p-4 space-y-4">
+              {/* Discord / channel infos */}
+              <div className="grid sm:grid-cols-2 gap-y-1 gap-x-4 text-xs font-mono">
+                <div><span className="text-muted-foreground/50">Discord ID:</span> <span className="text-white/80">{app.discordId}</span></div>
+                <div><span className="text-muted-foreground/50">Salon ticket:</span> <span className="text-white/80">{app.channelId}</span></div>
+                {app.reviewedByUsername && (
+                  <div className="sm:col-span-2">
+                    <span className="text-muted-foreground/50">Traité par:</span>{" "}
+                    <span className="text-white/80">{app.reviewedByUsername}</span>{" "}
+                    <span className="text-muted-foreground/50">le {fmtDateShort(app.reviewedAt)}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Brawl profile */}
+              {app.brawlTag && (
+                <div className={`flex items-center gap-3 p-3 border ${div.bg}`}>
+                  {app.brawlIconId && (
+                    <img
+                      src={`https://cdn-old.brawlify.com/profile/${app.brawlIconId}.png`}
+                      alt=""
+                      className="w-12 h-12 rounded"
+                    />
+                  )}
+                  <div>
+                    <div className="text-sm font-orbitron text-white">{app.brawlName}</div>
+                    <div className="text-xs font-mono text-muted-foreground/70">
+                      {app.brawlTag} · {app.brawlTrophies?.toLocaleString("fr-FR") ?? "—"} 🏆
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Answers */}
+              <div className="space-y-3">
+                <Answer label="Trophées (déclaré)" value={app.trophies} />
+                <Answer label="Ranked" value={app.ranked} />
+                <Answer label="Ambitions" value={app.ambitions} />
+                <Answer label="Pourquoi lui" value={app.motivation} />
+              </div>
+
+              {/* Status update */}
+              {app.status !== "draft" && (
+                <div className="space-y-2 pt-2 border-t border-white/5">
+                  <label className="text-[10px] font-orbitron uppercase tracking-widest text-muted-foreground">
+                    Note staff (envoyée en MP)
+                  </label>
+                  <textarea
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    placeholder="Optionnel — explication ou message pour le candidat"
+                    rows={2}
+                    className="w-full px-3 py-2 bg-black/40 border border-white/10 focus:border-primary/40 outline-none text-xs font-mono text-white placeholder:text-muted-foreground/40 resize-none"
+                  />
+                  <div className="flex flex-wrap gap-2">
+                    <StatusButton color="green" current={app.status} target="accepted" saving={saving} onClick={updateStatus} icon={CheckCircle2} label="Accepter" />
+                    <StatusButton color="red"   current={app.status} target="refused"  saving={saving} onClick={updateStatus} icon={UserX}         label="Refuser"  />
+                    <StatusButton color="yellow" current={app.status} target="on_hold" saving={saving} onClick={updateStatus} icon={Clock}        label="En pause" />
+                    <StatusButton color="orange" current={app.status} target="pending" saving={saving} onClick={updateStatus} icon={ClipboardList} label="Remettre en attente" />
+                  </div>
+                  {feedback && (
+                    <div className={`flex items-center gap-2 px-3 py-2 text-xs font-mono ${
+                      feedback.ok
+                        ? "text-green-300 bg-green-500/5 border border-green-500/30"
+                        : "text-red-300 bg-red-500/5 border border-red-500/30"
+                    }`}>
+                      {feedback.ok ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                      {feedback.text}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function Answer({ label, value }: { label: string; value: string | null }) {
+  return (
+    <div>
+      <div className="text-[10px] font-orbitron uppercase tracking-widest text-muted-foreground mb-1">{label}</div>
+      <div className="text-xs font-mono text-white/80 whitespace-pre-wrap">{value?.trim() || "—"}</div>
+    </div>
+  );
+}
+
+function StatusButton({
+  color, current, target, saving, onClick, icon: Icon, label,
+}: {
+  color: "green" | "red" | "yellow" | "orange";
+  current: RecruitmentApp["status"];
+  target: "accepted" | "refused" | "on_hold" | "pending";
+  saving: RecruitmentApp["status"] | null;
+  onClick: (s: "accepted" | "refused" | "on_hold" | "pending") => void;
+  icon: typeof CheckCircle2;
+  label: string;
+}) {
+  const palette: Record<typeof color, string> = {
+    green:  "border-green-500/40 text-green-300 hover:bg-green-500/10",
+    red:    "border-red-500/40 text-red-300 hover:bg-red-500/10",
+    yellow: "border-yellow-500/40 text-yellow-300 hover:bg-yellow-500/10",
+    orange: "border-orange-500/40 text-orange-300 hover:bg-orange-500/10",
+  };
+  const isCurrent = current === target;
+  const isSaving = saving === target;
+  return (
+    <button
+      onClick={() => onClick(target)}
+      disabled={!!saving || isCurrent}
+      className={`flex items-center gap-2 px-3 py-1.5 text-xs font-orbitron uppercase tracking-widest border transition-colors ${palette[color]} disabled:opacity-30 disabled:cursor-not-allowed`}
+    >
+      {isSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Icon className="w-3.5 h-3.5" />}
+      {isCurrent ? "Statut actuel" : label}
+    </button>
   );
 }
 
@@ -1603,7 +1989,7 @@ export default function Staff() {
     if (location.startsWith("/staff/bot/commandes")) return <CommandesPage token={session!.token} />;
     if (location.startsWith("/staff/bot")) return <BotPage token={session!.token} />;
     if (location.startsWith("/staff/moderation/logs")) return <ModerationLogsPage token={session!.token} />;
-    if (location.startsWith("/staff/recrutements/candidatures")) return <CandidaturesPage />;
+    if (location.startsWith("/staff/recrutements/candidatures")) return <CandidaturesPage token={session!.token} />;
     return <Overview session={session!} isAdmin={isAdmin} token={session!.token} />;
   }
 

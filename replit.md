@@ -141,6 +141,20 @@ Express 5 server sur le port 8080, chemins proxifiés via `/api`.
   - **`/move`** — `user`, `channel` (voice/stage), `reason?`. DM puis PATCH `channel_id`.
   - Toutes les réponses utilisent **cv2** (`replySuccess`/`replyError`). Le résultat indique si le MP a bien été délivré.
   - Toutes les actions (succès et échecs) sont **loguées** dans `moderation_logs` puis affichées sur `/staff/moderation/logs`.
+
+### Système de recrutement (tickets Discord)
+- **Lib** : `artifacts/api-server/src/lib/recruitment.ts` — flow complet
+- **Routes** : `artifacts/api-server/src/routes/recruitment.ts`
+  - `POST /api/staff/recruitment/panel { channelId }` — poste le panel CV2 dans un salon
+  - `GET /api/staff/recruitment/applications?status=` — liste filtrée
+  - `PATCH /api/staff/recruitment/applications/:id { status, staffNote }` — change statut + envoie un MP au candidat
+- **Bot** : intents `Guilds`, `GuildMessages`, `MessageContent` (à activer dans Developer Portal)
+  - Catégorie tickets : `1496764571086622811` · Rôle staff : `1243206708604702791` (constants `TICKET_CATEGORY_ID`, `STAFF_ROLE_ID`)
+  - Panel : sélecteur 3 divisions (Alpha=Master, Omega=Légendaire 2, Nexus=Mythique 2)
+  - Choix div → bot crée un salon privé sous la catégorie (deny @everyone, allow user + rôle staff)
+  - Flow question/réponse : tag (vérifié via Meonix avec boutons "Oui c'est moi"/"Non, retaper") → trophées → ranked → ambitions → pourquoi lui ; à chaque étape le bot supprime la question précédente et la réponse de l'utilisateur
+  - Soumission → salon verrouillé en écriture, statut `pending`, visible sur `/staff/recrutements/candidatures`
+  - Staff change statut depuis le site → MP automatique envoyé au candidat (CV2 avec note staff)
 - Handler d'interaction dispatche sur 3 types : `ApplicationCommand`, `ApplicationCommandAutocomplete`, `MessageComponent` (pour le select `maps_select`).
 - Helpers `cv2.ts` : `stringSelect()`, `respondAutocomplete()`, `actionRow()` accepte boutons **ou** select menus.
 - Helpers `moderation.ts` : `banUser/unbanUser/kickUser/timeoutUser/moveUser`, `sendDM()`, `logModeration()`, templates DM (`dmBan`/`dmKick`/`dmMute`/`dmUnmute`/`dmMove`).
@@ -225,6 +239,15 @@ Drizzle ORM + PostgreSQL.
   - `game_id`, `game_title`, `game_image`, `game_slug` — infos jeu
   - `fetched_at` — date de dernière synchro
   - `announced` boolean, `announced_at` — suivi des annonces Discord
+
+- **`recruitment_applications`** — Candidatures du système de recrutement par tickets Discord
+  - `id` serial PK, `discord_id`, `discord_username`, `guild_id`, `channel_id` (unique — salon ticket)
+  - `division` (`alpha`/`omega`/`nexus`), `step` (étape du flow : tag/tag_confirm/trophies/ranked/ambitions/motivation/done)
+  - `last_bot_message_id` — pour supprimer la question précédente après chaque réponse
+  - `brawl_tag`, `brawl_name`, `brawl_icon_id`, `brawl_trophies` — profil BS vérifié via Meonix
+  - `trophies`, `ranked`, `ambitions`, `motivation` — réponses textuelles
+  - `status` (`draft`/`pending`/`accepted`/`refused`/`on_hold`), `staff_note`
+  - `reviewed_by`, `reviewed_by_username`, `reviewed_at`, `submitted_at`, `created_at`, `updated_at`
 
 - **`settings`** — Paramètres applicatifs clé/valeur
   - `key` text PK, `value` text, `updated_at` timestamp
