@@ -26,7 +26,7 @@ import {
   ACCENT_RED, ACCENT_ORANGE, ACCENT_GREEN,
 } from "./moderation.js";
 import {
-  handleDivisionSelect, handleTagConfirmButton, handleTicketMessage,
+  handleDivisionSelect, handleTagConfirmButton, handleTicketMessage, handleReviewConfirmButton,
 } from "./recruitment.js";
 
 // ─── Presence ─────────────────────────────────────────────────────────────────
@@ -728,6 +728,9 @@ client.on(Events.InteractionCreate, async (interaction) => {
       }
       if (cid === "recruitment_tag_no") {
         return void (await handleTagConfirmButton(interaction, "no"));
+      }
+      if (cid === "recruitment_review_confirm") {
+        return void (await handleReviewConfirmButton(interaction));
       }
       return;
     }

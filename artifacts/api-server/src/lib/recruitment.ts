@@ -187,8 +187,8 @@ const QUESTIONS: Record<string, { title: string; body: string }> = {
     body: "Combien de **trophées totaux** as-tu actuellement ?\nÉcris simplement le nombre, par ex. `45000`.",
   },
   ranked: {
-    title: "Étape 3/5 — Ranked",
-    body: "Quel est ton **niveau ranked actuel** et ton meilleur niveau atteint ?\nEx : `Mythique 3 — meilleur Légendaire 1`.",
+    title: "Étape 3/5 — Ranked maximal",
+    body: "Quel est ton **ranked maximal** atteint sur Brawl Stars ?\nEx : `Légendaire 1`, `Mythique 3`, `Master`…",
   },
   ambitions: {
     title: "Étape 4/5 — Ambitions",
@@ -264,6 +264,63 @@ function buildSubmitted(): CV2Payload {
       text("Merci ! Ta candidature a été transmise au staff.\nTu recevras un **message privé** dès qu'une décision sera prise.\n\nCe ticket est maintenant fermé en écriture."),
     ], ACCENT_GREEN),
   ]);
+}
+
+function buildReview(args: {
+  division: Division;
+  brawlName: string | null;
+  brawlTag: string | null;
+  brawlIconUrl: string | null;
+  brawlTrophies: number | null;
+  trophies: string | null;
+  ranked: string | null;
+  ambitions: string | null;
+  motivation: string | null;
+}): CV2Payload {
+  const lines: string[] = [
+    "# Vérifie ta candidature",
+    "",
+    `**Division** — ${DIVISIONS[args.division].label} (${DIVISIONS[args.division].rank})`,
+    "",
+    "**Profil Brawl Stars**",
+    `• Pseudo — ${args.brawlName ?? "—"}`,
+    `• Tag — \`${args.brawlTag ?? "—"}\``,
+    `• Trophées API — ${args.brawlTrophies?.toLocaleString("fr-FR") ?? "—"}`,
+    "",
+    "**Tes réponses**",
+    `• Trophées déclarés — ${args.trophies ?? "—"}`,
+    `• Ranked maximal — ${args.ranked ?? "—"}`,
+    "",
+    "**Ambitions**",
+    args.ambitions ?? "—",
+    "",
+    "**Pourquoi toi ?**",
+    args.motivation ?? "—",
+    "",
+    "Si tout est correct, clique sur **Confirmer ma candidature** ci-dessous.",
+  ];
+  if (args.brawlIconUrl) {
+    lines.splice(5, 0, `[Icône](${args.brawlIconUrl})`, "");
+  }
+  return {
+    flags: IS_COMPONENTS_V2,
+    components: [
+      {
+        type: 17,
+        accent_color: ACCENT_VOID,
+        components: [
+          { type: 10, content: lines.join("\n") },
+          { type: 14, divider: true, spacing: 1 },
+          {
+            type: 1,
+            components: [
+              { type: 2, style: 3, label: "Confirmer ma candidature", custom_id: "recruitment_review_confirm" },
+            ],
+          },
+        ],
+      } as any,
+    ],
+  };
 }
 
 function buildError(msg: string): CV2Payload {
@@ -522,7 +579,6 @@ export async function handleTicketMessage(message: {
         brawlTrophies: profile.trophies,
         brawlIconId: profile.iconId,
         brawlIconUrl: profile.iconUrl,
-        ranked: profile.ranked, // auto-filled from API (overwritten if user is asked again)
         lastBotMessageId: id,
         updatedAt: new Date(),
       })
@@ -537,11 +593,11 @@ export async function handleTicketMessage(message: {
   }
 
   // ── Free-text steps ────────────────────────────────────────────────────────
-  // Note: the "ranked" step is skipped — value is auto-filled from the Meonix API.
   const next: Record<string, { col: keyof typeof recruitmentApplicationsTable["_"]["columns"]; nextStep: string | null }> = {
-    trophies:   { col: "trophies",   nextStep: "ambitions" },
+    trophies:   { col: "trophies",   nextStep: "ranked" },
+    ranked:     { col: "ranked",     nextStep: "ambitions" },
     ambitions:  { col: "ambitions",  nextStep: "motivation" },
-    motivation: { col: "motivation", nextStep: "done" },
+    motivation: { col: "motivation", nextStep: "review" },
   };
 
   const cur = next[app.step];
@@ -563,16 +619,26 @@ export async function handleTicketMessage(message: {
     updatedAt: new Date(),
   };
 
-  if (cur.nextStep === "done") {
-    update.step = "done";
-    update.status = "pending";
-    update.submittedAt = new Date();
-    update.lastBotMessageId = null;
+  if (cur.nextStep === "review") {
+    // Last text answer (motivation) collected → show recap with confirm button.
+    // All other answers were saved in earlier turns and live on `app`.
+    const recap = buildReview({
+      division,
+      brawlName: app.brawlName,
+      brawlTag: app.brawlTag,
+      brawlIconUrl: app.brawlIconUrl,
+      brawlTrophies: app.brawlTrophies,
+      trophies: app.trophies,
+      ranked: app.ranked,
+      ambitions: app.ambitions,
+      motivation: content,
+    });
+    const id = await sendAndGetId(app.channelId, recap);
+    update.step = "review";
+    update.lastBotMessageId = id;
     await db.update(recruitmentApplicationsTable)
       .set(update)
       .where(eq(recruitmentApplicationsTable.id, app.id));
-    await sendAndGetId(app.channelId, buildSubmitted());
-    await lockChannel(app.channelId, app.discordId);
     return;
   }
 
@@ -619,6 +685,46 @@ export async function handleTagConfirmButton(interaction: any, value: "yes" | "n
   await db.update(recruitmentApplicationsTable)
     .set({ step: "trophies", lastBotMessageId: id, updatedAt: new Date() })
     .where(eq(recruitmentApplicationsTable.id, app.id));
+}
+
+/** Handle "Confirmer ma candidature" button on the review recap. */
+export async function handleReviewConfirmButton(interaction: any): Promise<void> {
+  const app = await getAppByChannel(interaction.channelId);
+  if (!app || app.status !== "draft" || app.step !== "review") {
+    return ephemeralReply(interaction, buildError("Cette candidature n'est plus en attente de confirmation."));
+  }
+  if (app.discordId !== interaction.user.id) {
+    return ephemeralReply(interaction, buildError("Seul le candidat peut confirmer sa candidature."));
+  }
+
+  await ackInteraction(interaction);
+
+  // Remove the recap message with its button
+  if (app.lastBotMessageId) {
+    await deleteMessage(app.channelId, app.lastBotMessageId);
+  }
+
+  await db.update(recruitmentApplicationsTable)
+    .set({
+      step: "done",
+      status: "pending",
+      submittedAt: new Date(),
+      lastBotMessageId: null,
+      updatedAt: new Date(),
+    })
+    .where(eq(recruitmentApplicationsTable.id, app.id));
+
+  await sendAndGetId(app.channelId, buildSubmitted());
+  await lockChannel(app.channelId, app.discordId);
+
+  // DM the candidate to confirm reception
+  await sendDM(app.discordId, cv2([
+    container([
+      text("# ✅ Candidature reçue"),
+      sep(),
+      text(`Bonjour <@${app.discordId}>,\n\nVotre candidature pour la division **${DIVISIONS[app.division as Division]?.label ?? app.division}** **a bien été prise en compte**.\n\nLe staff l'examinera dans les meilleurs délais et tu recevras un message privé dès qu'une décision sera prise.`),
+    ], ACCENT_GREEN),
+  ]));
 }
 
 // ─── Status update from staff panel → DM the candidate ────────────────────────
