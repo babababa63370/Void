@@ -14,6 +14,7 @@ export const recruitmentApplicationsTable = pgTable(
     brawlTag: text("brawl_tag"),
     brawlName: text("brawl_name"),
     brawlIconId: integer("brawl_icon_id"),
+    brawlIconUrl: text("brawl_icon_url"),
     brawlTrophies: integer("brawl_trophies"),
     trophies: text("trophies"),
     ranked: text("ranked"),

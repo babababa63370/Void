@@ -223,10 +223,7 @@ function buildWelcome(userId: string, division: Division): CV2Payload {
   ]);
 }
 
-function buildTagConfirm(brawl: { name: string; tag: string; trophies: number; iconId?: number | null }): CV2Payload {
-  const icon = brawl.iconId
-    ? `https://cdn-old.brawlify.com/profile/${brawl.iconId}.png`
-    : null;
+function buildTagConfirm(brawl: { name: string; tag: string; trophies: number; iconUrl?: string | null; ranked?: string | null }): CV2Payload {
   const lines = [
     "# Confirme ton profil",
     "",
@@ -234,7 +231,8 @@ function buildTagConfirm(brawl: { name: string; tag: string; trophies: number; i
     `**Tag** — \`${brawl.tag}\``,
     `**Trophées** — ${brawl.trophies.toLocaleString("fr-FR")}`,
   ];
-  if (icon) lines.push("", `[Icône](${icon})`);
+  if (brawl.ranked) lines.push(`**Ranked** — ${brawl.ranked}`);
+  if (brawl.iconUrl) lines.push("", `[Icône](${brawl.iconUrl})`);
   lines.push("", "Est-ce bien ton compte ?");
   return {
     flags: IS_COMPONENTS_V2,
@@ -274,14 +272,69 @@ function buildError(msg: string): CV2Payload {
 
 // ─── Meonix lookup ────────────────────────────────────────────────────────────
 
-interface MeonixPlayer {
+interface BrawlProfile {
   name: string;
   tag: string;
   trophies: number;
-  icon?: { id?: number };
+  iconId: number | null;
+  iconUrl: string | null;
+  ranked: string | null;
 }
 
-async function lookupBrawl(rawTag: string): Promise<MeonixPlayer | null> {
+/** Extract a human-readable ranked label from the raw player object. */
+function extractRanked(player: any): string | null {
+  if (!player) return null;
+
+  // Direct string fields
+  for (const key of ["rankedTier", "rankedRank", "rankedLabel"]) {
+    const v = player[key];
+    if (typeof v === "string" && v.trim()) return formatRanked(v);
+  }
+
+  // Object shapes: { tier, division? } / { name, division? }
+  for (const key of ["ranked", "soloRanked", "currentRanked", "rankedSeason"]) {
+    const node = player[key];
+    if (!node) continue;
+    if (typeof node === "string" && node.trim()) return formatRanked(node);
+    if (typeof node === "object") {
+      const tier = node.tier ?? node.name ?? node.label ?? node.rank;
+      const division = node.division ?? node.subTier ?? node.level;
+      if (typeof tier === "string" && tier.trim()) {
+        return division != null ? `${formatRanked(tier)} ${division}` : formatRanked(tier);
+      }
+    }
+  }
+
+  return null;
+}
+
+/** Normalise tier strings like "LEGENDARY_2" → "Légendaire 2". */
+function formatRanked(raw: string): string {
+  const map: Record<string, string> = {
+    BRONZE: "Bronze",
+    SILVER: "Argent",
+    GOLD: "Or",
+    DIAMOND: "Diamant",
+    MYTHIC: "Mythique",
+    MYTHICAL: "Mythique",
+    LEGENDARY: "Légendaire",
+    MASTERS: "Master",
+    MASTER: "Master",
+    PRO: "Pro",
+  };
+  // Split on _ or whitespace
+  const parts = raw.trim().split(/[\s_]+/);
+  return parts
+    .map((p) => {
+      const upper = p.toUpperCase();
+      if (map[upper]) return map[upper];
+      // Numeric or unknown — keep as-is (capitalized)
+      return p.charAt(0).toUpperCase() + p.slice(1).toLowerCase();
+    })
+    .join(" ");
+}
+
+async function lookupBrawl(rawTag: string): Promise<BrawlProfile | null> {
   const tag = rawTag.startsWith("#") ? rawTag : `#${rawTag}`;
   const encoded = encodeURIComponent(tag);
   try {
@@ -289,8 +342,17 @@ async function lookupBrawl(rawTag: string): Promise<MeonixPlayer | null> {
       headers: { Accept: "application/json" },
     });
     if (!res.ok) return null;
-    const data = await res.json() as { player?: MeonixPlayer };
-    return data.player ?? null;
+    const data = await res.json() as { player?: any };
+    const p = data.player;
+    if (!p || typeof p.name !== "string" || typeof p.tag !== "string") return null;
+    return {
+      name: p.name,
+      tag: p.tag,
+      trophies: Number(p.trophies ?? 0),
+      iconId: typeof p.icon?.id === "number" ? p.icon.id : null,
+      iconUrl: typeof p.icon?.url === "string" ? p.icon.url : null,
+      ranked: extractRanked(p),
+    };
   } catch {
     return null;
   }
@@ -449,7 +511,8 @@ export async function handleTicketMessage(message: {
       name: profile.name,
       tag: profile.tag,
       trophies: profile.trophies,
-      iconId: profile.icon?.id ?? null,
+      iconUrl: profile.iconUrl,
+      ranked: profile.ranked,
     }));
     await db.update(recruitmentApplicationsTable)
       .set({
@@ -457,7 +520,9 @@ export async function handleTicketMessage(message: {
         brawlTag: profile.tag,
         brawlName: profile.name,
         brawlTrophies: profile.trophies,
-        brawlIconId: profile.icon?.id ?? null,
+        brawlIconId: profile.iconId,
+        brawlIconUrl: profile.iconUrl,
+        ranked: profile.ranked, // auto-filled from API (overwritten if user is asked again)
         lastBotMessageId: id,
         updatedAt: new Date(),
       })
@@ -472,9 +537,9 @@ export async function handleTicketMessage(message: {
   }
 
   // ── Free-text steps ────────────────────────────────────────────────────────
+  // Note: the "ranked" step is skipped — value is auto-filled from the Meonix API.
   const next: Record<string, { col: keyof typeof recruitmentApplicationsTable["_"]["columns"]; nextStep: string | null }> = {
-    trophies:   { col: "trophies",   nextStep: "ranked" },
-    ranked:     { col: "ranked",     nextStep: "ambitions" },
+    trophies:   { col: "trophies",   nextStep: "ambitions" },
     ambitions:  { col: "ambitions",  nextStep: "motivation" },
     motivation: { col: "motivation", nextStep: "done" },
   };
@@ -540,7 +605,8 @@ export async function handleTagConfirmButton(interaction: any, value: "yes" | "n
     await db.update(recruitmentApplicationsTable)
       .set({
         step: "tag",
-        brawlTag: null, brawlName: null, brawlTrophies: null, brawlIconId: null,
+        brawlTag: null, brawlName: null, brawlTrophies: null,
+        brawlIconId: null, brawlIconUrl: null, ranked: null,
         lastBotMessageId: id,
         updatedAt: new Date(),
       })

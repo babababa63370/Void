@@ -73,6 +73,7 @@ interface RecruitmentApp {
   brawlTag: string | null;
   brawlName: string | null;
   brawlIconId: number | null;
+  brawlIconUrl: string | null;
   brawlTrophies: number | null;
   trophies: string | null;
   ranked: string | null;
@@ -359,11 +360,12 @@ function ApplicationCard({ app, token, onUpdated }: { app: RecruitmentApp; token
               {/* Brawl profile */}
               {app.brawlTag && (
                 <div className={`flex items-center gap-3 p-3 border ${div.bg}`}>
-                  {app.brawlIconId && (
+                  {(app.brawlIconUrl || app.brawlIconId) && (
                     <img
-                      src={`https://cdn-old.brawlify.com/profile/${app.brawlIconId}.png`}
+                      src={app.brawlIconUrl ?? `https://cdn-old.brawlify.com/profile/${app.brawlIconId}.png`}
                       alt=""
                       className="w-12 h-12 rounded"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                     />
                   )}
                   <div>
