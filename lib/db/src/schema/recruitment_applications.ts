@@ -18,6 +18,7 @@ export const recruitmentApplicationsTable = pgTable(
     brawlTrophies: integer("brawl_trophies"),
     trophies: text("trophies"),
     ranked: text("ranked"),
+    playTime: text("play_time"),
     ambitions: text("ambitions"),
     motivation: text("motivation"),
     status: text("status").notNull().default("draft"), // draft | pending | accepted | refused | on_hold

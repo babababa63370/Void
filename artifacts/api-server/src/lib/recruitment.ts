@@ -179,23 +179,27 @@ async function createTicketChannel(args: CreateChannelArgs): Promise<{ id: strin
 
 const QUESTIONS: Record<string, { title: string; body: string }> = {
   tag: {
-    title: "Étape 1/5 — Ton tag Brawl Stars",
+    title: "Étape 1/6 — Ton tag Brawl Stars",
     body: "Envoie ton **tag Brawl Stars** (avec ou sans `#`).\nExemple : `#2YJUL2L9V` ou `2YJUL2L9V`.",
   },
   trophies: {
-    title: "Étape 2/5 — Trophées",
+    title: "Étape 2/6 — Trophées",
     body: "Combien de **trophées totaux** as-tu actuellement ?\nÉcris simplement le nombre, par ex. `45000`.",
   },
   ranked: {
-    title: "Étape 3/5 — Ranked maximal",
+    title: "Étape 3/6 — Ranked maximal",
     body: "Quel est ton **ranked maximal** atteint sur Brawl Stars ?\nEx : `Légendaire 1`, `Mythique 3`, `Master`…",
   },
+  playtime: {
+    title: "Étape 4/6 — Temps de jeu",
+    body: "Combien de **temps de jeu** consacres-tu à Brawl Stars ?\nEx : `2h par jour`, `~15h par semaine`, `tous les soirs`…",
+  },
   ambitions: {
-    title: "Étape 4/5 — Ambitions",
+    title: "Étape 5/6 — Ambitions",
     body: "Quelles sont tes **ambitions au sein de VOID** ?\nCompétition, scrims, événements, contenu… raconte.",
   },
   motivation: {
-    title: "Étape 5/5 — Pourquoi toi ?",
+    title: "Étape 6/6 — Pourquoi toi ?",
     body: "**Pourquoi devrions-nous te choisir** plutôt qu'un autre candidat ?\nQu'est-ce qui te rend différent ?",
   },
 };
@@ -274,6 +278,7 @@ function buildReview(args: {
   brawlTrophies: number | null;
   trophies: string | null;
   ranked: string | null;
+  playTime: string | null;
   ambitions: string | null;
   motivation: string | null;
 }): CV2Payload {
@@ -290,6 +295,7 @@ function buildReview(args: {
     "**Tes réponses**",
     `• Trophées déclarés — ${args.trophies ?? "—"}`,
     `• Ranked maximal — ${args.ranked ?? "—"}`,
+    `• Temps de jeu — ${args.playTime ?? "—"}`,
     "",
     "**Ambitions**",
     args.ambitions ?? "—",
@@ -595,7 +601,8 @@ export async function handleTicketMessage(message: {
   // ── Free-text steps ────────────────────────────────────────────────────────
   const next: Record<string, { col: keyof typeof recruitmentApplicationsTable["_"]["columns"]; nextStep: string | null }> = {
     trophies:   { col: "trophies",   nextStep: "ranked" },
-    ranked:     { col: "ranked",     nextStep: "ambitions" },
+    ranked:     { col: "ranked",     nextStep: "playtime" },
+    playtime:   { col: "playTime",   nextStep: "ambitions" },
     ambitions:  { col: "ambitions",  nextStep: "motivation" },
     motivation: { col: "motivation", nextStep: "review" },
   };
@@ -630,6 +637,7 @@ export async function handleTicketMessage(message: {
       brawlTrophies: app.brawlTrophies,
       trophies: app.trophies,
       ranked: app.ranked,
+      playTime: app.playTime,
       ambitions: app.ambitions,
       motivation: content,
     });

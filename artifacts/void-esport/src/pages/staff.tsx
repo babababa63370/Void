@@ -77,6 +77,7 @@ interface RecruitmentApp {
   brawlTrophies: number | null;
   trophies: string | null;
   ranked: string | null;
+  playTime: string | null;
   ambitions: string | null;
   motivation: string | null;
   status: "draft" | "pending" | "accepted" | "refused" | "on_hold";
@@ -381,6 +382,7 @@ function ApplicationCard({ app, token, onUpdated }: { app: RecruitmentApp; token
               <div className="space-y-3">
                 <Answer label="Trophées (déclaré)" value={app.trophies} />
                 <Answer label="Ranked" value={app.ranked} />
+                <Answer label="Temps de jeu" value={app.playTime} />
                 <Answer label="Ambitions" value={app.ambitions} />
                 <Answer label="Pourquoi lui" value={app.motivation} />
               </div>
