@@ -6,6 +6,7 @@ import {
   Loader2, ChevronRight, Wifi, WifiOff, Radio, Save, Clock,
   Trophy, Calendar, FlaskConical, Send, RefreshCw, Hash, ToggleLeft, ToggleRight, CheckCircle2, AlertCircle,
   Terminal, Gavel, Ban, UserX, VolumeX, Volume2, Move, ClipboardList,
+  Menu, X,
 } from "lucide-react";
 import { SiDiscord, SiTwitch } from "react-icons/si";
 import { Link, useLocation } from "wouter";
@@ -202,7 +203,7 @@ function CandidaturesPage({ token }: { token: string }) {
             value={panelChannelId}
             onChange={(e) => setPanelChannelId(e.target.value)}
             placeholder="ID du salon (ex. 1234567890123456789)"
-            className="flex-1 min-w-[260px] px-3 py-2 bg-black/40 border border-white/10 focus:border-primary/40 outline-none text-sm font-mono text-white placeholder:text-muted-foreground/40"
+            className="flex-1 w-full min-w-0 sm:min-w-[260px] px-3 py-2 bg-black/40 border border-white/10 focus:border-primary/40 outline-none text-sm font-mono text-white placeholder:text-muted-foreground/40"
           />
           <button
             onClick={sendPanel}
@@ -1983,6 +1984,15 @@ export default function Staff() {
 
   if (!session || !isStaff) return <NotFound />;
 
+  // Find the currently active item for the mobile header title
+  const activeItem = NAV_GROUPS
+    .flatMap((g) => g.items.map((it) => ({ ...it, group: g.category })))
+    .find((it) =>
+      it.path === "/staff" || it.path === "/staff/bot"
+        ? location === it.path
+        : location.startsWith(it.path),
+    ) ?? { label: "Overview", group: "Staff Panel", icon: LayoutDashboard, path: "/staff" };
+
   function renderSection() {
     if (location.startsWith("/staff/liste-staff")) return <ListeStaff token={session!.token} />;
     if (location.startsWith("/staff/matcherino")) return <MatcherinoPage token={session!.token} />;
@@ -1996,74 +2006,210 @@ export default function Staff() {
   return (
     <>
       <Navbar />
-      <div className="min-h-screen bg-background pt-16 md:pt-20 flex">
+      <StaffShell
+        location={location}
+        activeItem={activeItem}
+        username={session.username ?? "Staff"}
+        avatar={session.avatar ?? null}
+        discordId={session.discordId}
+      >
+        <AnimatePresence mode="wait">
+          <div key={location}>
+            {renderSection()}
+          </div>
+        </AnimatePresence>
+      </StaffShell>
+    </>
+  );
+}
 
-        {/* ── Sidebar ── */}
-        <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-white/5 bg-white/[0.01] pt-8 pb-6 px-3">
-          <nav className="flex flex-col gap-5">
-            {NAV_GROUPS.map((group) => (
-              <div key={group.category}>
-                <p className="text-[10px] font-orbitron text-muted-foreground/30 uppercase tracking-widest px-3 mb-1.5">
-                  {group.category}
-                </p>
-                <div className="flex flex-col gap-0.5">
-                  {group.items.map(({ path, label, icon: Icon }) => {
-                    const active =
-                      path === "/staff" || path === "/staff/bot"
-                        ? location === path
-                        : location.startsWith(path);
-                    return (
-                      <Link
-                        key={path}
-                        href={path}
-                        className={`flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition-colors font-orbitron uppercase tracking-wider ${
-                          active
-                            ? "bg-primary/10 text-primary border-l-2 border-primary"
-                            : "text-muted-foreground hover:text-foreground hover:bg-white/5 border-l-2 border-transparent"
-                        }`}
-                      >
-                        <Icon className="w-4 h-4 shrink-0" />
-                        {label}
-                      </Link>
-                    );
-                  })}
+// ─── Staff layout shell (desktop sidebar + mobile drawer) ────────────────────
+
+function StaffShell({
+  location,
+  activeItem,
+  username,
+  avatar,
+  discordId,
+  children,
+}: {
+  location: string;
+  activeItem: { label: string; group: string; icon: typeof LayoutDashboard; path: string };
+  username: string;
+  avatar: string | null;
+  discordId: string;
+  children: React.ReactNode;
+}) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  // Close drawer when route changes
+  useEffect(() => { setDrawerOpen(false); }, [location]);
+
+  // Lock body scroll while drawer is open
+  useEffect(() => {
+    if (drawerOpen) {
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = ""; };
+    }
+  }, [drawerOpen]);
+
+  const ActiveIcon = activeItem.icon;
+  const avatarUrl = avatar
+    ? `https://cdn.discordapp.com/avatars/${discordId}/${avatar}.png?size=64`
+    : null;
+
+  return (
+    <div className="min-h-screen bg-background pt-16 md:pt-20 flex">
+
+      {/* ── Desktop sidebar ── */}
+      <aside className="hidden md:flex flex-col w-56 shrink-0 border-r border-white/5 bg-white/[0.01] pt-8 pb-6 px-3">
+        <nav className="flex flex-col gap-5">
+          {NAV_GROUPS.map((group) => (
+            <div key={group.category}>
+              <p className="text-[10px] font-orbitron text-muted-foreground/30 uppercase tracking-widest px-3 mb-1.5">
+                {group.category}
+              </p>
+              <div className="flex flex-col gap-0.5">
+                {group.items.map(({ path, label, icon: Icon }) => {
+                  const active =
+                    path === "/staff" || path === "/staff/bot"
+                      ? location === path
+                      : location.startsWith(path);
+                  return (
+                    <Link
+                      key={path}
+                      href={path}
+                      className={`flex items-center gap-2.5 px-3 py-2.5 text-sm font-medium transition-colors font-orbitron uppercase tracking-wider ${
+                        active
+                          ? "bg-primary/10 text-primary border-l-2 border-primary"
+                          : "text-muted-foreground hover:text-foreground hover:bg-white/5 border-l-2 border-transparent"
+                      }`}
+                    >
+                      <Icon className="w-4 h-4 shrink-0" />
+                      {label}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+      </aside>
+
+      {/* ── Mobile sticky header (under main navbar) ── */}
+      <header className="md:hidden fixed top-16 left-0 right-0 z-30 h-12 bg-background/95 backdrop-blur border-b border-white/5 flex items-center px-3 gap-3">
+        <button
+          onClick={() => setDrawerOpen(true)}
+          aria-label="Ouvrir le menu"
+          className="w-9 h-9 flex items-center justify-center border border-white/10 text-foreground active:bg-white/5"
+        >
+          <Menu className="w-4 h-4" />
+        </button>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <ActiveIcon className="w-4 h-4 text-primary shrink-0" />
+          <div className="min-w-0">
+            <div className="text-[9px] font-mono uppercase tracking-widest text-muted-foreground/50 leading-none">
+              {activeItem.group}
+            </div>
+            <div className="text-xs font-orbitron uppercase tracking-widest text-white truncate leading-tight mt-0.5">
+              {activeItem.label}
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* ── Mobile drawer ── */}
+      <AnimatePresence>
+        {drawerOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.18 }}
+              onClick={() => setDrawerOpen(false)}
+              className="md:hidden fixed inset-0 z-40 bg-black/70 backdrop-blur-sm"
+            />
+            <motion.aside
+              initial={{ x: "-100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "-100%" }}
+              transition={{ type: "tween", duration: 0.22, ease: [0.32, 0.72, 0, 1] }}
+              className="md:hidden fixed top-0 bottom-0 left-0 z-50 w-[82%] max-w-xs bg-background border-r border-white/10 flex flex-col"
+            >
+              {/* Drawer header */}
+              <div className="flex items-center justify-between px-4 h-14 border-b border-white/5 shrink-0">
+                <span className="text-xs font-orbitron uppercase tracking-widest text-primary">
+                  Staff Panel
+                </span>
+                <button
+                  onClick={() => setDrawerOpen(false)}
+                  aria-label="Fermer"
+                  className="w-9 h-9 flex items-center justify-center text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Drawer nav */}
+              <nav className="flex-1 overflow-y-auto py-4">
+                {NAV_GROUPS.map((group) => (
+                  <div key={group.category} className="mb-5">
+                    <p className="text-[10px] font-orbitron text-muted-foreground/40 uppercase tracking-widest px-4 mb-2">
+                      {group.category}
+                    </p>
+                    <div className="flex flex-col">
+                      {group.items.map(({ path, label, icon: Icon }) => {
+                        const active =
+                          path === "/staff" || path === "/staff/bot"
+                            ? location === path
+                            : location.startsWith(path);
+                        return (
+                          <Link
+                            key={path}
+                            href={path}
+                            onClick={() => setDrawerOpen(false)}
+                            className={`flex items-center gap-3 px-4 py-3 text-sm font-orbitron uppercase tracking-wider transition-colors ${
+                              active
+                                ? "bg-primary/10 text-primary border-l-2 border-primary"
+                                : "text-muted-foreground active:bg-white/5 border-l-2 border-transparent"
+                            }`}
+                          >
+                            <Icon className="w-4 h-4 shrink-0" />
+                            {label}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </nav>
+
+              {/* Drawer footer (user) */}
+              <div className="border-t border-white/5 p-4 flex items-center gap-3 shrink-0">
+                {avatarUrl ? (
+                  <img src={avatarUrl} alt="" className="w-9 h-9 rounded-full border border-white/10" />
+                ) : (
+                  <div className="w-9 h-9 rounded-full border border-white/10 bg-white/5 flex items-center justify-center text-xs font-mono text-muted-foreground">
+                    {username[0]?.toUpperCase() ?? "?"}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <div className="text-xs font-orbitron text-white truncate">{username}</div>
+                  <div className="text-[10px] font-mono text-muted-foreground/50 uppercase tracking-wider">
+                    Connecté
+                  </div>
                 </div>
               </div>
-            ))}
-          </nav>
-        </aside>
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
 
-        {/* ── Mobile bottom tabs ── */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur border-t border-white/5 flex">
-          {NAV_GROUPS.flatMap((g) => g.items).map(({ path, label, icon: Icon }) => {
-            const active =
-              path === "/staff" || path === "/staff/bot"
-                ? location === path
-                : location.startsWith(path);
-            return (
-              <Link
-                key={path}
-                href={path}
-                className={`flex-1 flex flex-col items-center gap-1 py-3 text-[10px] font-orbitron uppercase tracking-wider transition-colors ${
-                  active ? "text-primary" : "text-muted-foreground/50"
-                }`}
-              >
-                <Icon className="w-5 h-5" />
-                {label}
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* ── Content ── */}
-        <main className="flex-1 min-w-0 px-6 md:px-10 py-8 pb-24 md:pb-8 overflow-y-auto">
-          <AnimatePresence mode="wait">
-            <div key={location}>
-              {renderSection()}
-            </div>
-          </AnimatePresence>
-        </main>
-      </div>
-    </>
+      {/* ── Content ── */}
+      <main className="flex-1 min-w-0 px-4 sm:px-6 md:px-10 pt-16 md:pt-8 pb-10 overflow-x-hidden">
+        {children}
+      </main>
+    </div>
   );
 }
