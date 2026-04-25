@@ -321,6 +321,7 @@ function buildReview(args: {
             type: 1,
             components: [
               { type: 2, style: 3, label: "Confirmer ma candidature", custom_id: "recruitment_review_confirm" },
+              { type: 2, style: 4, label: "Annuler ma candidature", custom_id: "recruitment_review_cancel" },
             ],
           },
         ],
@@ -733,6 +734,39 @@ export async function handleReviewConfirmButton(interaction: any): Promise<void>
       text(`Bonjour <@${app.discordId}>,\n\nVotre candidature pour la division **${DIVISIONS[app.division as Division]?.label ?? app.division}** **a bien été prise en compte**.\n\nLe staff l'examinera dans les meilleurs délais et tu recevras un message privé dès qu'une décision sera prise.`),
     ], ACCENT_GREEN),
   ]));
+}
+
+/** Handle "Annuler ma candidature" button on the review recap. */
+export async function handleReviewCancelButton(interaction: any): Promise<void> {
+  const app = await getAppByChannel(interaction.channelId);
+  if (!app || app.status !== "draft" || app.step !== "review") {
+    return ephemeralReply(interaction, buildError("Cette candidature ne peut plus être annulée."));
+  }
+  if (app.discordId !== interaction.user.id) {
+    return ephemeralReply(interaction, buildError("Seul le candidat peut annuler sa candidature."));
+  }
+
+  await ackInteraction(interaction);
+
+  // DM the candidate to confirm cancellation (best-effort, before deleting the channel)
+  await sendDM(app.discordId, cv2([
+    container([
+      text("# Candidature annulée"),
+      sep(),
+      text(`Bonjour <@${app.discordId}>,\n\nTa candidature pour la division **${DIVISIONS[app.division as Division]?.label ?? app.division}** a bien été **annulée**.\n\nTu peux relancer une nouvelle candidature à tout moment depuis le salon de recrutement.`),
+    ], ACCENT_RED),
+  ]));
+
+  // Remove the DB row so the candidate can open a fresh ticket
+  await db.delete(recruitmentApplicationsTable)
+    .where(eq(recruitmentApplicationsTable.id, app.id));
+
+  // Delete the ticket channel
+  try {
+    await discord(`/channels/${app.channelId}`, { method: "DELETE" });
+  } catch (err) {
+    console.warn("[Recruitment] cancel: channel delete failed:", err);
+  }
 }
 
 // ─── Status update from staff panel → DM the candidate ────────────────────────
