@@ -2,6 +2,14 @@ import { Router, type IRouter } from "express";
 import { db, tipsTable, settingsTable } from "@workspace/db";
 import { desc, eq, sql } from "drizzle-orm";
 import { jwtVerify } from "jose";
+import {
+  syncPayPalTips,
+  getSyncStatus,
+  isPayPalConfigured,
+  maybeBackgroundSync,
+  PayPalConfigError,
+  PayPalApiError,
+} from "../lib/paypal";
 
 const router: IRouter = Router();
 
@@ -94,6 +102,9 @@ router.get("/tips/public", async (_req, res) => {
       return;
     }
 
+    // Trigger a background PayPal sync (throttled to once every 5 min).
+    maybeBackgroundSync();
+
     const totals = await getTotals();
     const recentTips = settings.showDonors
       ? await db
@@ -147,8 +158,35 @@ router.get("/tips", async (req, res) => {
 
 router.get("/tips/settings", async (req, res) => {
   if (!(await requireMeonix(req, res))) return;
-  const settings = await readSettings();
-  res.json(settings);
+  const [settings, paypal] = await Promise.all([readSettings(), getSyncStatus()]);
+  res.json({ ...settings, paypal });
+});
+
+router.post("/tips/sync", async (req, res) => {
+  if (!(await requireMeonix(req, res))) return;
+  if (!isPayPalConfigured()) {
+    res.status(400).json({ error: "paypal_not_configured" });
+    return;
+  }
+  try {
+    const result = await syncPayPalTips();
+    const status = await getSyncStatus();
+    res.json({ ok: true, result, paypal: status });
+  } catch (err) {
+    if (err instanceof PayPalConfigError) {
+      res.status(400).json({ error: "paypal_not_configured", detail: err.message });
+      return;
+    }
+    if (err instanceof PayPalApiError) {
+      res.status(502).json({
+        error: "paypal_api_error",
+        status: err.status,
+        detail: err.detail.slice(0, 500),
+      });
+      return;
+    }
+    res.status(500).json({ error: "server_error", detail: String(err) });
+  }
 });
 
 router.post("/tips/settings", async (req, res) => {

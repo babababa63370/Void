@@ -16,6 +16,9 @@ import {
   X,
   Pencil,
   Sparkles,
+  AlertCircle,
+  CheckCircle2,
+  CloudDownload,
 } from "lucide-react";
 import { Link } from "wouter";
 import NotFound from "@/pages/not-found";
@@ -31,12 +34,28 @@ interface Session {
   token: string;
 }
 
+interface PayPalStatus {
+  configured: boolean;
+  environment: "live" | "sandbox";
+  lastSync: string | null;
+  lastError: string | null;
+}
+
 interface Settings {
   enabled: boolean;
   paypalUrl: string;
   goalAmountCents: number;
   goalLabel: string;
   showDonors: boolean;
+  paypal?: PayPalStatus;
+}
+
+interface SyncResult {
+  inserted: number;
+  scanned: number;
+  windowStart: string;
+  windowEnd: string;
+  pages: number;
 }
 
 interface Tip {
@@ -306,6 +325,9 @@ export default function MeonixTips() {
   const [savingTip, setSavingTip] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+  const [syncError, setSyncError] = useState<string | null>(null);
 
   // Local form state for goal label / paypal url (debounced save)
   const [paypalUrl, setPaypalUrl] = useState("");
@@ -405,6 +427,39 @@ export default function MeonixTips() {
       }
     } finally {
       setSavingTip(false);
+    }
+  }
+
+  async function runPayPalSync() {
+    if (!user) return;
+    setSyncing(true);
+    setSyncError(null);
+    try {
+      const res = await fetch("/api/tips/sync", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${user.token}` },
+      });
+      if (!res.ok) {
+        const err = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          detail?: string;
+        };
+        setSyncError(err.detail || err.error || `HTTP ${res.status}`);
+        return;
+      }
+      const data = (await res.json()) as {
+        ok: true;
+        result: SyncResult;
+        paypal: PayPalStatus;
+      };
+      setSyncResult(data.result);
+      setSettings((prev) => (prev ? { ...prev, paypal: data.paypal } : prev));
+      // Reload tips list to show newly inserted ones
+      await loadAll(user.token);
+    } catch (err) {
+      setSyncError(String(err));
+    } finally {
+      setSyncing(false);
     }
   }
 
@@ -642,6 +697,109 @@ export default function MeonixTips() {
                 </>
               )}
             </div>
+          </div>
+        </motion.section>
+
+        {/* PayPal sync */}
+        <motion.section
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.08 }}
+          className="border border-white/10 bg-[#0a0a0e] p-5 mb-6"
+        >
+          <div className="flex items-start justify-between gap-3 mb-3">
+            <div className="flex-1 min-w-0">
+              <h2 className="font-orbitron font-bold text-xs uppercase tracking-widest text-white flex items-center gap-2">
+                <CloudDownload className="w-3.5 h-3.5 text-primary" />
+                Sync PayPal
+                {settings.paypal?.environment === "sandbox" && (
+                  <span className="px-1.5 py-0.5 bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[9px] font-orbitron uppercase tracking-wider">
+                    Sandbox
+                  </span>
+                )}
+              </h2>
+              <p className="text-xs text-muted-foreground/60 mt-1 leading-relaxed">
+                Récupère automatiquement les dons reçus via l'API PayPal (compte Business requis).
+              </p>
+            </div>
+            <button
+              onClick={() => void runPayPalSync()}
+              disabled={syncing || !settings.paypal?.configured}
+              data-testid="button-paypal-sync"
+              className="inline-flex items-center gap-1.5 px-3 py-2 border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-orbitron uppercase tracking-wider transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+            >
+              {syncing ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <CloudDownload className="w-3.5 h-3.5" />
+              )}
+              {syncing ? "Sync..." : "Synchroniser"}
+            </button>
+          </div>
+
+          <div className="space-y-2 text-[11px] font-mono">
+            <div className="flex items-center gap-2">
+              {settings.paypal?.configured ? (
+                <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
+              ) : (
+                <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />
+              )}
+              <span className="text-muted-foreground/70">
+                {settings.paypal?.configured
+                  ? "API PayPal configurée"
+                  : "PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET manquants"}
+              </span>
+            </div>
+
+            {settings.paypal?.lastSync && (
+              <div className="flex items-center gap-2 text-muted-foreground/60">
+                <RefreshCw className="w-3 h-3 shrink-0" />
+                <span>Dernière sync : {formatDate(settings.paypal.lastSync)}</span>
+              </div>
+            )}
+
+            {settings.paypal?.lastError && !syncResult && !syncError && (
+              <div className="flex items-start gap-2 p-2.5 bg-red-500/10 border border-red-500/30 text-red-300">
+                <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+                <span className="break-all">Dernière erreur : {settings.paypal.lastError}</span>
+              </div>
+            )}
+
+            <AnimatePresence mode="wait">
+              {syncError && (
+                <motion.div
+                  key="err"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-start gap-2 p-2.5 bg-red-500/10 border border-red-500/30 text-red-300"
+                >
+                  <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+                  <span className="break-all">{syncError}</span>
+                </motion.div>
+              )}
+              {syncResult && !syncError && (
+                <motion.div
+                  key="ok"
+                  initial={{ opacity: 0, y: -4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0 }}
+                  className="flex items-start gap-2 p-2.5 bg-emerald-500/10 border border-emerald-500/30 text-emerald-300"
+                  data-testid="text-sync-result"
+                >
+                  <CheckCircle2 className="w-3 h-3 shrink-0 mt-0.5" />
+                  <span>
+                    {syncResult.inserted} nouveau{syncResult.inserted > 1 ? "x" : ""} don
+                    {syncResult.inserted > 1 ? "s" : ""} ajouté{syncResult.inserted > 1 ? "s" : ""}
+                    {" "}({syncResult.scanned} transaction{syncResult.scanned > 1 ? "s" : ""} analysée{syncResult.scanned > 1 ? "s" : ""})
+                  </span>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <p className="text-[10px] text-muted-foreground/40 pt-1">
+              Sync auto toutes les 5 min lors des visites de la page /donate. Tu peux aussi forcer manuellement.
+            </p>
           </div>
         </motion.section>
 
