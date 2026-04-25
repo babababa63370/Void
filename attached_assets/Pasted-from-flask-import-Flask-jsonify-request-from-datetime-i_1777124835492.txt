@@ -1,0 +1,116 @@
+from flask import Flask, jsonify, request
+from datetime import datetime, timedelta
+import json
+import uuid
+import os
+
+app = Flask(__name__)
+
+DB_FILE = "dons.json"
+MDP = "spacemeonixme"
+
+def verifier_auth():
+    auth = request.headers.get("Authorization")
+    if not auth or auth != f"Bearer {MDP}":
+        return jsonify({"erreur": "Non autorisé"}), 401
+    return None
+
+def lire_json():
+    if not os.path.exists(DB_FILE):
+        with open(DB_FILE, "w") as f:
+            json.dump({"dons": []}, f)
+    with open(DB_FILE, "r") as f:
+        return json.load(f)
+
+def ecrire_json(data):
+    with open(DB_FILE, "w") as f:
+        json.dump(data, f, indent=2)
+
+def filtrer_par_periode(dons, periode):
+    maintenant = datetime.now()
+
+    if periode == "aujourd'hui":
+        debut = maintenant.replace(hour=0, minute=0, second=0, microsecond=0)
+    elif periode == "semaine":
+        debut = maintenant - timedelta(days=7)
+    elif periode == "mois":
+        debut = maintenant - timedelta(days=30)
+    else:
+        return dons  # "tout" ou pas de filtre
+
+    return [
+        d for d in dons
+        if datetime.fromisoformat(d["date"]) >= debut
+    ]
+
+
+# POST /dons — Ajouter un don
+@app.route("/dons", methods=["POST"])
+def ajouter_don():
+    err = verifier_auth()
+    if err: return err
+    body = request.get_json()
+
+    if not body or "montant" not in body:
+        return jsonify({"erreur": "Montant requis"}), 400
+
+    montant = body["montant"]
+    if not isinstance(montant, (int, float)) or montant <= 0:
+        return jsonify({"erreur": "Montant invalide"}), 400
+
+    don = {
+        "id": str(uuid.uuid4()),
+        "montant": round(float(montant), 2),
+        "date": datetime.now().isoformat()
+    }
+
+    data = lire_json()
+    data["dons"].append(don)
+    ecrire_json(data)
+
+    return jsonify({"message": "Don ajouté", "don": don}), 201
+
+
+# GET /dons — Lire les dons (avec filtre optionnel)
+# ?periode=aujourd'hui | semaine | mois | tout
+@app.route("/dons", methods=["GET"])
+def lire_dons():
+    err = verifier_auth()
+    if err: return err
+    periode = request.args.get("periode", "tout")
+
+    periodes_valides = ["aujourd'hui", "semaine", "mois", "tout"]
+    if periode not in periodes_valides:
+        return jsonify({"erreur": f"Période invalide. Valeurs acceptées : {periodes_valides}"}), 400
+
+    data = lire_json()
+    dons_filtres = filtrer_par_periode(data["dons"], periode)
+    total = round(sum(d["montant"] for d in dons_filtres), 2)
+
+    return jsonify({
+        "periode": periode,
+        "nombre": len(dons_filtres),
+        "total": total,
+        "dons": dons_filtres
+    })
+
+
+# DELETE /dons/<id> — Supprimer un don
+@app.route("/dons/<don_id>", methods=["DELETE"])
+def supprimer_don(don_id):
+    err = verifier_auth()
+    if err: return err
+    data = lire_json()
+    dons_avant = len(data["dons"])
+
+    data["dons"] = [d for d in data["dons"] if d["id"] != don_id]
+
+    if len(data["dons"]) == dons_avant:
+        return jsonify({"erreur": "Don introuvable"}), 404
+
+    ecrire_json(data)
+    return jsonify({"message": "Don supprimé"})
+
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5067)

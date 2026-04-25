@@ -7,6 +7,7 @@ import {
   getSyncStatus,
   isPayPalConfigured,
   maybeBackgroundSync,
+  setPayPalEnv,
   PayPalConfigError,
   PayPalApiError,
 } from "../lib/paypal";
@@ -160,6 +161,18 @@ router.get("/tips/settings", async (req, res) => {
   if (!(await requireMeonix(req, res))) return;
   const [settings, paypal] = await Promise.all([readSettings(), getSyncStatus()]);
   res.json({ ...settings, paypal });
+});
+
+router.post("/tips/paypal-env", async (req, res) => {
+  if (!(await requireMeonix(req, res))) return;
+  const body = req.body as { env?: string };
+  if (body.env !== "live" && body.env !== "sandbox") {
+    res.status(400).json({ error: "invalid_env" });
+    return;
+  }
+  await setPayPalEnv(body.env);
+  const status = await getSyncStatus();
+  res.json({ ok: true, paypal: status });
 });
 
 router.post("/tips/sync", async (req, res) => {

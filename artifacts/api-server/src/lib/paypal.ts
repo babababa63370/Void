@@ -1,12 +1,30 @@
 import { db, tipsTable, settingsTable } from "@workspace/db";
 import { eq, inArray, sql } from "drizzle-orm";
 
-const PAYPAL_BASE = (process.env.PAYPAL_ENV ?? "live").toLowerCase() === "sandbox"
-  ? "https://api-m.sandbox.paypal.com"
-  : "https://api-m.paypal.com";
-
 const LAST_SYNC_KEY = "tips.paypal_last_sync";
 const LAST_ERROR_KEY = "tips.paypal_last_error";
+const ENV_KEY = "tips.paypal_env";
+
+type PayPalEnv = "live" | "sandbox";
+
+async function getEnv(): Promise<PayPalEnv> {
+  const stored = await readSetting(ENV_KEY);
+  if (stored === "sandbox" || stored === "live") return stored;
+  const fromEnvVar = (process.env.PAYPAL_ENV ?? "live").toLowerCase();
+  return fromEnvVar === "sandbox" ? "sandbox" : "live";
+}
+
+export async function setPayPalEnv(env: PayPalEnv): Promise<void> {
+  await writeSetting(ENV_KEY, env);
+  // Invalidate cached token so next call uses the new environment
+  cachedToken = null;
+}
+
+function baseUrl(env: PayPalEnv): string {
+  return env === "sandbox"
+    ? "https://api-m.sandbox.paypal.com"
+    : "https://api-m.paypal.com";
+}
 
 let cachedToken: { token: string; expiresAt: number } | null = null;
 
@@ -41,7 +59,7 @@ export function isPayPalConfigured(): boolean {
   return !!(process.env.PAYPAL_CLIENT_ID && process.env.PAYPAL_CLIENT_SECRET);
 }
 
-async function getAccessToken(): Promise<string> {
+async function getAccessToken(env: PayPalEnv): Promise<string> {
   if (cachedToken && cachedToken.expiresAt > Date.now() + 60_000) {
     return cachedToken.token;
   }
@@ -49,7 +67,7 @@ async function getAccessToken(): Promise<string> {
   const { id, secret } = requireCreds();
   const basic = Buffer.from(`${id}:${secret}`).toString("base64");
 
-  const res = await fetch(`${PAYPAL_BASE}/v1/oauth2/token`, {
+  const res = await fetch(`${baseUrl(env)}/v1/oauth2/token`, {
     method: "POST",
     headers: {
       Authorization: `Basic ${basic}`,
@@ -109,11 +127,12 @@ function isoNoMs(d: Date): string {
 
 async function fetchTransactionsPage(
   token: string,
+  env: PayPalEnv,
   startDate: Date,
   endDate: Date,
   page: number,
 ): Promise<TransactionsResponse> {
-  const url = new URL(`${PAYPAL_BASE}/v1/reporting/transactions`);
+  const url = new URL(`${baseUrl(env)}/v1/reporting/transactions`);
   url.searchParams.set("start_date", isoNoMs(startDate));
   url.searchParams.set("end_date", isoNoMs(endDate));
   url.searchParams.set("fields", "transaction_info,payer_info");
@@ -200,12 +219,14 @@ export async function syncPayPalTips(opts?: { fullScanDays?: number }): Promise<
     windowStart = new Date(now.getTime() - maxSpanMs + 60_000);
   }
 
+  const env = await getEnv();
+
   let token: string;
   try {
-    token = await getAccessToken();
+    token = await getAccessToken(env);
   } catch (err) {
     const detail = err instanceof PayPalApiError ? err.detail : String(err);
-    await writeSetting(LAST_ERROR_KEY, `auth: ${detail.slice(0, 500)}`);
+    await writeSetting(LAST_ERROR_KEY, `auth (${env}): ${detail.slice(0, 500)}`);
     throw err;
   }
 
@@ -218,7 +239,7 @@ export async function syncPayPalTips(opts?: { fullScanDays?: number }): Promise<
 
   try {
     while (pageNum <= totalPages && pageNum <= 20) {
-      const data = await fetchTransactionsPage(token, windowStart, now, pageNum);
+      const data = await fetchTransactionsPage(token, env, windowStart, now, pageNum);
       const txs = data.transaction_details ?? [];
       collected.push(...txs);
       scanned += txs.length;
@@ -295,14 +316,13 @@ export async function syncPayPalTips(opts?: { fullScanDays?: number }): Promise<
 
 export async function getSyncStatus(): Promise<{
   configured: boolean;
-  environment: "live" | "sandbox";
+  environment: PayPalEnv;
   lastSync: string | null;
   lastError: string | null;
 }> {
-  const env = (process.env.PAYPAL_ENV ?? "live").toLowerCase() === "sandbox" ? "sandbox" : "live";
   return {
     configured: isPayPalConfigured(),
-    environment: env,
+    environment: await getEnv(),
     lastSync: await readSetting(LAST_SYNC_KEY),
     lastError: await readSetting(LAST_ERROR_KEY),
   };
