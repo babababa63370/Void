@@ -53,6 +53,8 @@ Competitive Brawl Stars esport clan site with cyberpunk/esports aesthetic.
 - `/staff` — Staff Panel (Discord OAuth requis + rôle `staff`), sous-routes : Overview / Liste staff / Bot Panel / Commandes / Matcherino
 - `/meonix` — Zone restreinte accessible uniquement à l'ID Discord `1243206708604702791` (sinon 404)
 - `/meonix/db` — Admin DB (statut, backups JSON, migration ancienne→nouvelle DB) — Meonix uniquement
+- `/meonix/tips` — Admin Dons (toggle activation, URL PayPalMe, objectif, affichage donateurs, CRUD dons, sync paypal.meonix.me) — Meonix uniquement
+- `/donate` — Page Dons publique (404 si désactivée). Affiche total, objectif, derniers donateurs, lien PayPal.Me
 - `/*` — Animated 404 page
 
 ### i18n System (`src/i18n/`)
@@ -125,6 +127,15 @@ Express 5 server sur le port 8080, chemins proxifiés via `/api`.
 - `POST /api/staff/matcherino/auto-announce/stop` — arrête l'auto-announce (staff)
 - `GET /api/staff/matcherino/settings` — lit les paramètres depuis la DB (staff)
 - `POST /api/staff/matcherino/settings` — sauvegarde un paramètre en DB (staff)
+- `GET /api/tips/public` — public, retourne `{enabled, paypalUrl, totalCents, count, recent[]}` ou 404 si désactivé. Déclenche un sync auto throttlé (5 min) sur paypal.meonix.me.
+- `GET /api/tips/enabled` — public léger, `{enabled}` (utilisé par la navbar)
+- `GET /api/tips` — liste complète des dons (Meonix)
+- `GET /api/tips/settings` — settings + statut Meonix `{configured, url, lastSync, lastError}` (Meonix)
+- `POST /api/tips/settings` — modifie `enabled`, `paypalUrl`, `goalAmountCents`, `goalLabel`, `showDonors` (Meonix)
+- `POST /api/tips` — ajoute un don : POST sur paypal.meonix.me puis insertion locale avec `external_id` retourné (Meonix)
+- `PATCH /api/tips/:id` — modifie uniquement les métadonnées locales (`donorName`, `message`, `currency`) — montant/date verrouillés sur la source distante (Meonix)
+- `DELETE /api/tips/:id` — DELETE sur paypal.meonix.me puis suppression locale (404 distant toléré) (Meonix)
+- `POST /api/tips/sync` — pull complet depuis paypal.meonix.me, upsert par `external_id`, retire les rows locaux qui ont disparu côté API (Meonix)
 
 ### Discord Bot — Slash commands
 - **`/event`** — Liste les prochains tournois Matcherino VOID (5 max). Boutons liens : *View on VOID* + *View on Matcherino* avec emoji `<:matcherino5e:1494738441349632050>`.
@@ -204,6 +215,9 @@ Express 5 server sur le port 8080, chemins proxifiés via `/api`.
 - `JWT_SECRET` — HS256 signing secret
 - `DISCORD_BOT_TOKEN` — token du bot Discord VOID
 - `DATABASE_URL` — PostgreSQL connection string (Replit-managed)
+- `PAYPAL_MEONIX_TOKEN` — token Bearer pour l'API perso de gestion des dons (paypal.meonix.me, valeur `MDP` dans l'app Flask)
+- `PAYPAL_MEONIX_URL` *(optionnel)* — surcharge l'URL de base (défaut `https://paypal.meonix.me`)
+- `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET` *(legacy)* — anciens credentials PayPal officiels, conservés pour `src/lib/paypal.ts` mais plus branchés par défaut
 
 ### Key Files
 - `src/routes/discord-auth.ts` — Discord OAuth + JWT
@@ -218,6 +232,9 @@ Express 5 server sur le port 8080, chemins proxifiés via `/api`.
 - `src/lib/brawlEvents.ts` — client API Brawl Stars (rotation + cache + parsing timestamps non-ISO)
 - `src/lib/matcherinoCard.ts` — génération PNG des cartes tournoi
 - `src/lib/autoAnnounce.ts` — service d'annonce automatique (exporte `PING_ID`)
+- `src/lib/paypalMeonix.ts` — client de l'API `paypal.meonix.me` (POST/GET/DELETE `/dons`) + miroir local dans `tips`, sync auto throttlé (`maybeBackgroundSyncMeonix`) et statut (`getMeonixStatus`)
+- `src/lib/paypal.ts` — *(legacy)* client OAuth2 + Transactions Reporting API PayPal officiel (plus importé par défaut, conservé en cas de rebascule)
+- `src/routes/tips.ts` — toutes les routes `/api/tips/*` (public + Meonix). Mirror writes vers paypal.meonix.me sur POST/DELETE.
 - `src/utils/cv2.ts` — helpers Components V2 (text/sep/gallery/container/linkButton/actionRow/stringSelect, replyInteraction, respondAutocomplete, sendCv2Message, registerSlashCommands)
 
 ---
@@ -251,7 +268,15 @@ Drizzle ORM + PostgreSQL.
 
 - **`settings`** — Paramètres applicatifs clé/valeur
   - `key` text PK, `value` text, `updated_at` timestamp
-  - Clés utilisées : `matcherino.channelId`, `matcherino.autoAnnounce`, `matcherino.manualChannelId`
+  - Clés Matcherino : `matcherino.channelId`, `matcherino.autoAnnounce`, `matcherino.manualChannelId`
+  - Clés Tips/Dons : `tips.enabled`, `tips.paypal_url`, `tips.goal_amount`, `tips.goal_label`, `tips.show_donors`, `tips.meonix_last_sync`, `tips.meonix_last_error`
+
+- **`tips`** — Dons reçus (miroir local de `paypal.meonix.me/dons`)
+  - `id` serial PK, `amount_cents` integer, `currency` (défaut `EUR`)
+  - `donor_name`, `message` — métadonnées locales (l'API distante ne les stocke pas)
+  - `source` (`meonix` pour les rows poussés/synced via paypal.meonix.me, `manual` si l'API n'est pas configurée)
+  - `external_id` — id retourné par paypal.meonix.me, utilisé pour dédoublonnage et suppression distante
+  - `received_at`, `created_at`
 
 ### Commands
 - `pnpm --filter @workspace/db run push` — push schema (interactive)
