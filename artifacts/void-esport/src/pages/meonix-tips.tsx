@@ -34,9 +34,9 @@ interface Session {
   token: string;
 }
 
-interface MeonixStatus {
+interface PayPalStatus {
   configured: boolean;
-  url: string;
+  environment: "live" | "sandbox";
   lastSync: string | null;
   lastError: string | null;
 }
@@ -47,14 +47,15 @@ interface Settings {
   goalAmountCents: number;
   goalLabel: string;
   showDonors: boolean;
-  meonix?: MeonixStatus;
+  paypal?: PayPalStatus;
 }
 
 interface SyncResult {
   inserted: number;
-  removed: number;
-  total: number;
-  source: string;
+  scanned: number;
+  windowStart: string;
+  windowEnd: string;
+  pages: number;
 }
 
 interface Tip {
@@ -429,6 +430,24 @@ export default function MeonixTips() {
     }
   }
 
+  async function switchPayPalEnv(env: "live" | "sandbox") {
+    if (!user) return;
+    setSyncError(null);
+    try {
+      const res = await fetch("/api/tips/paypal-env", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${user.token}` },
+        body: JSON.stringify({ env }),
+      });
+      if (res.ok) {
+        const data = (await res.json()) as { paypal: PayPalStatus };
+        setSettings((prev) => (prev ? { ...prev, paypal: data.paypal } : prev));
+      }
+    } catch (err) {
+      setSyncError(String(err));
+    }
+  }
+
   async function runPayPalSync() {
     if (!user) return;
     setSyncing(true);
@@ -449,10 +468,10 @@ export default function MeonixTips() {
       const data = (await res.json()) as {
         ok: true;
         result: SyncResult;
-        meonix: MeonixStatus;
+        paypal: PayPalStatus;
       };
       setSyncResult(data.result);
-      setSettings((prev) => (prev ? { ...prev, meonix: data.meonix } : prev));
+      setSettings((prev) => (prev ? { ...prev, paypal: data.paypal } : prev));
       // Reload tips list to show newly inserted ones
       await loadAll(user.token);
     } catch (err) {
@@ -710,16 +729,20 @@ export default function MeonixTips() {
             <div className="flex-1 min-w-0">
               <h2 className="font-orbitron font-bold text-xs uppercase tracking-widest text-white flex items-center gap-2">
                 <CloudDownload className="w-3.5 h-3.5 text-primary" />
-                API Dons (paypal.meonix.me)
+                Sync PayPal
+                {settings.paypal?.environment === "sandbox" && (
+                  <span className="px-1.5 py-0.5 bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[9px] font-orbitron uppercase tracking-wider">
+                    Sandbox
+                  </span>
+                )}
               </h2>
               <p className="text-xs text-muted-foreground/60 mt-1 leading-relaxed">
-                Les dons sont enregistrés sur ton API personnelle. Cette page miroite la base distante : ajout, suppression et synchronisation se font via{" "}
-                <span className="text-primary/80 font-mono break-all">{settings.meonix?.url ?? "paypal.meonix.me"}</span>.
+                Récupère automatiquement les dons reçus via l'API PayPal officielle (compte Business requis).
               </p>
             </div>
             <button
               onClick={() => void runPayPalSync()}
-              disabled={syncing || !settings.meonix?.configured}
+              disabled={syncing || !settings.paypal?.configured}
               data-testid="button-paypal-sync"
               className="inline-flex items-center gap-1.5 px-3 py-2 border border-primary/40 bg-primary/10 hover:bg-primary/20 text-primary text-[11px] font-orbitron uppercase tracking-wider transition-colors active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
             >
@@ -732,31 +755,63 @@ export default function MeonixTips() {
             </button>
           </div>
 
+          {/* Env toggle */}
+          <div className="mb-4">
+            <label className="text-[10px] font-orbitron uppercase tracking-widest text-muted-foreground/60 mb-2 block">
+              Environnement PayPal
+            </label>
+            <div className="grid grid-cols-2 gap-1 p-1 bg-white/5 border border-white/10">
+              {(["live", "sandbox"] as const).map((env) => {
+                const active = settings.paypal?.environment === env;
+                return (
+                  <button
+                    key={env}
+                    onClick={() => void switchPayPalEnv(env)}
+                    disabled={syncing || active}
+                    data-testid={`button-paypal-env-${env}`}
+                    className={`px-3 py-2 text-[11px] font-orbitron uppercase tracking-wider transition-colors ${
+                      active
+                        ? env === "live"
+                          ? "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40"
+                          : "bg-amber-500/20 text-amber-300 border border-amber-500/40"
+                        : "text-muted-foreground/60 hover:text-white border border-transparent"
+                    }`}
+                  >
+                    {env === "live" ? "Live (production)" : "Sandbox (test)"}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="text-[10px] text-muted-foreground/40 mt-1.5 leading-relaxed">
+              Si tu as créé l'app PayPal en mode <span className="text-amber-300">Sandbox</span> sur le dashboard, choisis Sandbox. Sinon, garde Live.
+            </p>
+          </div>
+
           <div className="space-y-2 text-[11px] font-mono">
             <div className="flex items-center gap-2">
-              {settings.meonix?.configured ? (
+              {settings.paypal?.configured ? (
                 <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
               ) : (
                 <AlertCircle className="w-3 h-3 text-amber-400 shrink-0" />
               )}
               <span className="text-muted-foreground/70">
-                {settings.meonix?.configured
-                  ? "Token API configuré"
-                  : "PAYPAL_MEONIX_TOKEN manquant"}
+                {settings.paypal?.configured
+                  ? "API PayPal configurée"
+                  : "PAYPAL_CLIENT_ID / PAYPAL_CLIENT_SECRET manquants"}
               </span>
             </div>
 
-            {settings.meonix?.lastSync && (
+            {settings.paypal?.lastSync && (
               <div className="flex items-center gap-2 text-muted-foreground/60">
                 <RefreshCw className="w-3 h-3 shrink-0" />
-                <span>Dernière sync : {formatDate(settings.meonix.lastSync)}</span>
+                <span>Dernière sync : {formatDate(settings.paypal.lastSync)}</span>
               </div>
             )}
 
-            {settings.meonix?.lastError && !syncResult && !syncError && (
+            {settings.paypal?.lastError && !syncResult && !syncError && (
               <div className="flex items-start gap-2 p-2.5 bg-red-500/10 border border-red-500/30 text-red-300">
                 <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
-                <span className="break-all">Dernière erreur : {settings.meonix.lastError}</span>
+                <span className="break-all">Dernière erreur : {settings.paypal.lastError}</span>
               </div>
             )}
 
@@ -784,9 +839,9 @@ export default function MeonixTips() {
                 >
                   <CheckCircle2 className="w-3 h-3 shrink-0 mt-0.5" />
                   <span>
-                    {syncResult.total} don{syncResult.total > 1 ? "s" : ""} sur l'API
-                    {syncResult.inserted > 0 && ` · +${syncResult.inserted} ajouté${syncResult.inserted > 1 ? "s" : ""}`}
-                    {syncResult.removed > 0 && ` · −${syncResult.removed} retiré${syncResult.removed > 1 ? "s" : ""}`}
+                    {syncResult.inserted} nouveau{syncResult.inserted > 1 ? "x" : ""} don
+                    {syncResult.inserted > 1 ? "s" : ""} ajouté{syncResult.inserted > 1 ? "s" : ""}
+                    {" "}({syncResult.scanned} transaction{syncResult.scanned > 1 ? "s" : ""} analysée{syncResult.scanned > 1 ? "s" : ""})
                   </span>
                 </motion.div>
               )}

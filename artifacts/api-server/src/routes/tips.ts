@@ -3,15 +3,14 @@ import { db, tipsTable, settingsTable } from "@workspace/db";
 import { desc, eq, sql } from "drizzle-orm";
 import { jwtVerify } from "jose";
 import {
-  syncMeonixDonations,
-  getMeonixStatus,
-  isMeonixApiConfigured,
-  maybeBackgroundSyncMeonix,
-  remoteAddDonation,
-  remoteDeleteDonation,
-  MeonixApiConfigError,
-  MeonixApiError,
-} from "../lib/paypalMeonix";
+  syncPayPalTips,
+  getSyncStatus,
+  isPayPalConfigured,
+  maybeBackgroundSync,
+  setPayPalEnv,
+  PayPalConfigError,
+  PayPalApiError,
+} from "../lib/paypal";
 
 const router: IRouter = Router();
 
@@ -104,8 +103,8 @@ router.get("/tips/public", async (_req, res) => {
       return;
     }
 
-    // Throttled background sync against paypal.meonix.me
-    maybeBackgroundSyncMeonix();
+    // Throttled background PayPal sync (5 min)
+    maybeBackgroundSync();
 
     const totals = await getTotals();
     const recentTips = settings.showDonors
@@ -159,28 +158,40 @@ router.get("/tips", async (req, res) => {
 
 router.get("/tips/settings", async (req, res) => {
   if (!(await requireMeonix(req, res))) return;
-  const [settings, meonix] = await Promise.all([readSettings(), getMeonixStatus()]);
-  res.json({ ...settings, meonix });
+  const [settings, paypal] = await Promise.all([readSettings(), getSyncStatus()]);
+  res.json({ ...settings, paypal });
+});
+
+router.post("/tips/paypal-env", async (req, res) => {
+  if (!(await requireMeonix(req, res))) return;
+  const body = req.body as { env?: string };
+  if (body.env !== "live" && body.env !== "sandbox") {
+    res.status(400).json({ error: "invalid_env" });
+    return;
+  }
+  await setPayPalEnv(body.env);
+  const status = await getSyncStatus();
+  res.json({ ok: true, paypal: status });
 });
 
 router.post("/tips/sync", async (req, res) => {
   if (!(await requireMeonix(req, res))) return;
-  if (!isMeonixApiConfigured()) {
-    res.status(400).json({ error: "meonix_not_configured" });
+  if (!isPayPalConfigured()) {
+    res.status(400).json({ error: "paypal_not_configured" });
     return;
   }
   try {
-    const result = await syncMeonixDonations();
-    const status = await getMeonixStatus();
-    res.json({ ok: true, result, meonix: status });
+    const result = await syncPayPalTips();
+    const status = await getSyncStatus();
+    res.json({ ok: true, result, paypal: status });
   } catch (err) {
-    if (err instanceof MeonixApiConfigError) {
-      res.status(400).json({ error: "meonix_not_configured", detail: err.message });
+    if (err instanceof PayPalConfigError) {
+      res.status(400).json({ error: "paypal_not_configured", detail: err.message });
       return;
     }
-    if (err instanceof MeonixApiError) {
+    if (err instanceof PayPalApiError) {
       res.status(502).json({
-        error: "meonix_api_error",
+        error: "paypal_api_error",
         status: err.status,
         detail: err.detail.slice(0, 500),
       });
@@ -254,30 +265,6 @@ router.post("/tips", async (req, res) => {
   }
 
   try {
-    // Mirror to remote API first (so we have the canonical id/date)
-    let externalId: string | null = null;
-    let receivedAt: Date = body.receivedAt ? new Date(body.receivedAt) : new Date();
-    let source = "manual";
-
-    if (isMeonixApiConfigured()) {
-      try {
-        const remote = await remoteAddDonation(amountCents / 100);
-        externalId = remote.id;
-        if (remote.date) receivedAt = new Date(remote.date);
-        source = "meonix";
-      } catch (err) {
-        if (err instanceof MeonixApiError) {
-          res.status(502).json({
-            error: "meonix_api_error",
-            status: err.status,
-            detail: err.detail.slice(0, 500),
-          });
-          return;
-        }
-        throw err;
-      }
-    }
-
     const inserted = await db
       .insert(tipsTable)
       .values({
@@ -285,9 +272,8 @@ router.post("/tips", async (req, res) => {
         currency: (body.currency ?? "EUR").trim().toUpperCase().slice(0, 8) || "EUR",
         donorName: body.donorName?.trim() || null,
         message: body.message?.trim() || null,
-        source,
-        externalId,
-        receivedAt,
+        source: "manual",
+        receivedAt: body.receivedAt ? new Date(body.receivedAt) : new Date(),
       })
       .returning();
     res.json({ tip: inserted[0] });
@@ -306,17 +292,21 @@ router.patch("/tips/:id", async (req, res) => {
   }
 
   const body = req.body as {
+    amountCents?: number;
+    amount?: number;
     currency?: string;
     donorName?: string | null;
     message?: string | null;
+    receivedAt?: string | null;
   };
 
-  // Only metadata is editable locally — the remote API has no PATCH endpoint,
-  // so amount / date stay tied to the remote record.
   const patch: Partial<typeof tipsTable.$inferInsert> = {};
+  if (typeof body.amountCents === "number") patch.amountCents = Math.floor(body.amountCents);
+  else if (typeof body.amount === "number") patch.amountCents = Math.round(body.amount * 100);
   if (typeof body.currency === "string") patch.currency = body.currency.trim().toUpperCase().slice(0, 8) || "EUR";
   if (body.donorName !== undefined) patch.donorName = body.donorName?.trim() || null;
   if (body.message !== undefined) patch.message = body.message?.trim() || null;
+  if (body.receivedAt) patch.receivedAt = new Date(body.receivedAt);
 
   if (Object.keys(patch).length === 0) {
     res.status(400).json({ error: "no_changes" });
@@ -349,34 +339,14 @@ router.delete("/tips/:id", async (req, res) => {
   }
 
   try {
-    // Find the local row first so we can mirror the delete to the remote API.
-    const existing = await db
-      .select({ id: tipsTable.id, externalId: tipsTable.externalId })
-      .from(tipsTable)
-      .where(eq(tipsTable.id, id));
-    if (existing.length === 0) {
+    const deleted = await db
+      .delete(tipsTable)
+      .where(eq(tipsTable.id, id))
+      .returning();
+    if (deleted.length === 0) {
       res.status(404).json({ error: "not_found" });
       return;
     }
-
-    const externalId = existing[0]?.externalId ?? null;
-    if (externalId && isMeonixApiConfigured()) {
-      try {
-        await remoteDeleteDonation(externalId);
-      } catch (err) {
-        if (err instanceof MeonixApiError && err.status !== 404) {
-          res.status(502).json({
-            error: "meonix_api_error",
-            status: err.status,
-            detail: err.detail.slice(0, 500),
-          });
-          return;
-        }
-        // 404 on remote = already gone, proceed with local delete
-      }
-    }
-
-    await db.delete(tipsTable).where(eq(tipsTable.id, id));
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: "server_error", detail: String(err) });
