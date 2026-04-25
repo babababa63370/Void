@@ -1,0 +1,102 @@
+[13:59:02.671] INFO (5591): request errored
+    req: {
+      "id": 10,
+      "method": "POST",
+      "url": "/api/tips/sync"
+    }
+    res: {
+      "statusCode": 502
+    }
+    responseTime: 195
+    err: {
+      "type": "Error",
+      "message": "failed with status code 502",
+      "stack":
+          Error: failed with status code 502
+              at onResFinished (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)
+              at ServerResponse.onResponseComplete (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)
+              at ServerResponse.emit (node:events:536:35)
+              at onFinish (node:_http_outgoing:1031:10)
+              at callback (node:internal/streams/writable:766:21)
+              at afterWrite (node:internal/streams/writable:710:5)
+              at afterWriteTick (node:internal/streams/writable:696:10)
+              at process.processTicksAndRejections (node:internal/process/task_queues:81:21)
+    }
+[13:59:34.314] INFO (5591): request completed
+    req: {
+      "id": 11,
+      "method": "GET",
+      "url": "/api/auth/verify"
+    }
+    res: {
+      "statusCode": 304
+    }
+    responseTime: 15
+[13:59:34.444] INFO (5591): request completed
+    req: {
+      "id": 12,
+      "method": "GET",
+      "url": "/api/tips"
+    }
+    res: {
+      "statusCode": 304
+    }
+    responseTime: 5
+[13:59:34.456] INFO (5591): request completed
+    req: {
+      "id": 13,
+      "method": "GET",
+      "url": "/api/tips/settings"
+    }
+    res: {
+      "statusCode": 200
+    }
+    responseTime: 14
+[13:59:39.807] INFO (5591): request errored
+    req: {
+      "id": 14,
+      "method": "POST",
+      "url": "/api/tips/sync"
+    }
+    res: {
+      "statusCode": 502
+    }
+    responseTime: 216
+    err: {
+      "type": "Error",
+      "message": "failed with status code 502",
+      "stack":
+          Error: failed with status code 502
+              at onResFinished (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)
+              at ServerResponse.onResponseComplete (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)
+              at ServerResponse.emit (node:events:536:35)
+              at onFinish (node:_http_outgoing:1031:10)
+              at callback (node:internal/streams/writable:766:21)
+              at afterWrite (node:internal/streams/writable:710:5)
+              at afterWriteTick (node:internal/streams/writable:696:10)
+              at process.processTicksAndRejections (node:internal/process/task_queues:81:21)
+    }
+[13:59:41.032] INFO (5591): request errored
+    req: {
+      "id": 15,
+      "method": "POST",
+      "url": "/api/tips/sync"
+    }
+    res: {
+      "statusCode": 502
+    }
+    responseTime: 97
+    err: {
+      "type": "Error",
+      "message": "failed with status code 502",
+      "stack":
+          Error: failed with status code 502
+              at onResFinished (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:115:39)
+              at ServerResponse.onResponseComplete (/home/runner/workspace/node_modules/.pnpm/pino-http@10.5.0/node_modules/pino-http/logger.js:178:14)
+              at ServerResponse.emit (node:events:536:35)
+              at onFinish (node:_http_outgoing:1031:10)
+              at callback (node:internal/streams/writable:766:21)
+              at afterWrite (node:internal/streams/writable:710:5)
+              at afterWriteTick (node:internal/streams/writable:696:10)
+              at process.processTicksAndRejections (node:internal/process/task_queues:81:21)
+    }
