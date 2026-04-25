@@ -5,8 +5,23 @@ const en = {
   nav_legacy: "Legacy",
   nav_join: "Join",
   nav_matcherino: "Matcherino",
+  nav_donate: "Donate",
   nav_enterVoid: "Enter Void",
   nav_language: "Language",
+
+  // DONATE
+  donate_metaTitle: "Donate",
+  donate_metaDesc: "Support VOID Esport. Help fund our tournaments, prize pools and the community.",
+  donate_badge: "Support The Void",
+  donate_title: "Power The Void",
+  donate_subtitle: "Your support funds our tournaments, prize pools and keeps the community alive. Every contribution counts.",
+  donate_statTotal: "Total Raised",
+  donate_statCount: "Donations",
+  donate_goal: "Goal",
+  donate_ctaPaypal: "Donate via PayPal",
+  donate_recentTitle: "Recent Supporters",
+  donate_anonymous: "Anonymous",
+  donate_thanks: "Thank you for keeping VOID alive.",
 
   // FOOTER
   footer_desc: "Forged in darkness, driven by competition. VOID is the premier Brawl Stars esport community for players who demand excellence and thrive in the void.",

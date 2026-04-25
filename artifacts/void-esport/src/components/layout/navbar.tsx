@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { SiDiscord } from "react-icons/si";
-import { Menu, X, Globe, ChevronDown, ShieldCheck } from "lucide-react";
+import { Menu, X, Globe, ChevronDown, ShieldCheck, Heart } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import logoPath from "@assets/purple_black_emblem_without_void_c4a1470f_1776350974040.png";
@@ -14,7 +14,15 @@ export default function Navbar() {
   const isStaff = session?.roles?.includes("staff") ?? false;
   const [isOpen, setIsOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
+  const [tipsEnabled, setTipsEnabled] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/tips/enabled")
+      .then((r) => r.json() as Promise<{ enabled: boolean }>)
+      .then((d) => setTipsEnabled(!!d.enabled))
+      .catch(() => setTipsEnabled(false));
+  }, []);
 
   const navItems = [
     { href: "/about", label: t("nav_about") },
@@ -22,7 +30,10 @@ export default function Navbar() {
     { href: "/achievements", label: t("nav_legacy") },
     { href: "/matcherino", label: t("nav_matcherino"), icon: matcherinoIconPath },
     { href: "/join", label: t("nav_join") },
-  ];
+    ...(tipsEnabled
+      ? [{ href: "/donate", label: t("nav_donate"), lucideIcon: Heart }]
+      : []),
+  ] as Array<{ href: string; label: string; icon?: string; lucideIcon?: typeof Heart }>;
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -62,6 +73,7 @@ export default function Navbar() {
               {item.icon && (
                 <img src={item.icon} alt="" className="w-4 h-4 object-contain" />
               )}
+              {item.lucideIcon && <item.lucideIcon className="w-4 h-4" />}
               {item.label}
             </Link>
           ))}
@@ -166,6 +178,7 @@ export default function Navbar() {
                     {item.icon && (
                       <img src={item.icon} alt="" className="w-5 h-5 object-contain" />
                     )}
+                    {item.lucideIcon && <item.lucideIcon className="w-5 h-5" />}
                     {item.label}
                   </Link>
                 </motion.div>

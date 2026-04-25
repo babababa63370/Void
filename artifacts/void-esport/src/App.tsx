@@ -13,6 +13,8 @@ import RosterPlayer from "@/pages/roster-player";
 import PlayersLogin from "@/pages/players-login";
 import Meonix from "@/pages/meonix";
 import MeonixDb from "@/pages/meonix-db";
+import MeonixTips from "@/pages/meonix-tips";
+import Donate from "@/pages/donate";
 import Staff from "@/pages/staff";
 import About from "@/pages/about";
 import Achievements from "@/pages/achievements";
@@ -42,6 +44,8 @@ function Router() {
       <Route path="/players-login" component={PlayersLogin} />
       <Route path="/meonix" component={Meonix} />
       <Route path="/meonix/db" component={MeonixDb} />
+      <Route path="/meonix/tips" component={MeonixTips} />
+      <Route path="/donate" component={Donate} />
       <Route path="/staff" component={Staff} />
       <Route path="/staff/:section" component={Staff} />
       <Route path="/staff/:section/:sub" component={Staff} />

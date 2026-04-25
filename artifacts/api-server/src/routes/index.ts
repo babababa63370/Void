@@ -10,6 +10,7 @@ import matcherinoRouter from "./matcherino";
 import brawlRouter from "./brawl";
 import recruitmentRouter from "./recruitment";
 import dbAdminRouter from "./db-admin";
+import tipsRouter from "./tips";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use(matcherinoRouter);
 router.use(brawlRouter);
 router.use(recruitmentRouter);
 router.use(dbAdminRouter);
+router.use(tipsRouter);
 
 export default router;

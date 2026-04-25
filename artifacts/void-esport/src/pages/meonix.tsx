@@ -15,6 +15,7 @@ import {
   ChevronRight,
   ArrowLeft,
   Database,
+  Heart,
 } from "lucide-react";
 
 const ALLOWED_ID = "1243206708604702791";
@@ -379,13 +380,23 @@ export default function Meonix() {
             <ArrowLeft className="w-3.5 h-3.5" />
             Back to home
           </a>
-          <a
-            href="/meonix/db"
-            className="inline-flex items-center gap-2 px-3 py-2 border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 hover:text-violet-200 text-[11px] font-orbitron uppercase tracking-widest transition-colors active:scale-95"
-          >
-            <Database className="w-3.5 h-3.5" />
-            DB Admin
-          </a>
+          <div className="flex items-center gap-2">
+            <a
+              href="/meonix/tips"
+              className="inline-flex items-center gap-2 px-3 py-2 border border-pink-500/30 bg-pink-500/10 hover:bg-pink-500/20 text-pink-300 hover:text-pink-200 text-[11px] font-orbitron uppercase tracking-widest transition-colors active:scale-95"
+              data-testid="link-meonix-tips"
+            >
+              <Heart className="w-3.5 h-3.5" />
+              Tips
+            </a>
+            <a
+              href="/meonix/db"
+              className="inline-flex items-center gap-2 px-3 py-2 border border-violet-500/30 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 hover:text-violet-200 text-[11px] font-orbitron uppercase tracking-widest transition-colors active:scale-95"
+            >
+              <Database className="w-3.5 h-3.5" />
+              DB Admin
+            </a>
+          </div>
         </div>
 
         {/* ── Header ── */}

@@ -37,6 +37,7 @@ const routeToHtml: Record<string, string> = {
   "/players-login": "/players-login.html",
   "/meonix": "/meonix.html",
   "/staff": "/staff.html",
+  "/donate": "/donate.html",
 };
 
 export default defineConfig({
